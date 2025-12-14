@@ -20,8 +20,8 @@ pixels = [list(row) for row in pixels]
 #pixels=pixels[0]
 #print(pixels[0])
 #print(len(pixels[0]))
-with open("height.txt","w") as f:
-    f.write("{")
+with open("height.lua","w") as f:
+    f.write("terrain_height={")
     for row in pixels:
         #f.write("{")
         for i in range(0,len(row)//3):
