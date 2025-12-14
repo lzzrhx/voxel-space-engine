@@ -16,7 +16,7 @@ version 2
  -- reduce divisions?
  -- terrain editor: VistaPro?
 :: main.lua
---[[pod_format="raw",created="2025-12-12 16:39:03",modified="2025-12-14 13:11:53",revision=1117]]
+--[[pod_format="raw",created="2025-12-12 16:39:03",modified="2025-12-14 18:03:38",revision=1530]]
 include "terrain/0.lua"
 include "terrain/1.lua"
 
@@ -25,17 +25,19 @@ WIDTH = 480
 HEIGHT = 270
 SCALE_FACTOR = 100
 MAP_SIZE = 512
---PI = 3.141592
+CAM_SPEED = 1.5
+DEPTH_STEP = 3
+WIDTH_STEP = 6
 
 -- Variables
 terrain = nil
 cam = { 
-	x = 256,  -- x coordinate on map
-	y = 256,  -- y coordinate on map
-	h = 300,  -- height
-	t = -150, -- vertical tilt
-	r = { rad = 0, sin = 0, cos = 0 }, -- rotation
-	c = { z = 200, l = { x = 0, y = 0 }, r = { x = 0, y = 0 } } -- clipping
+	x = 0,  -- x coordinate on map
+	y = 0,  -- y coordinate on map
+	z = 280,  -- height
+	tilt = -150, -- vertical tilt
+	rot = { rad = 0, sin = 0, cos = 0 }, -- rotation
+	clip = { dist = 200, left = { x = 0, y = 0 }, right = { x = 0, y = 0 } } -- clipping
 }
 
 -- Built-in init function
@@ -47,47 +49,50 @@ end
 -- Built-in update function
 function _update()
 	if (btn(0)) then
-		--rotate_cam(0.005)
-		cam.x -= cam.r.sin * 2
-		cam.y -= cam.r.cos * 2
+		cam.x -= cam.rot.sin * CAM_SPEED
+		cam.y -= cam.rot.cos * CAM_SPEED
 	end
 	if (btn(1)) then
-		--rotate_cam(-0.005)
-		cam.x += cam.r.sin * 2
-		cam.y += cam.r.cos * 2
+		cam.x += cam.rot.sin * CAM_SPEED
+		cam.y += cam.rot.cos * CAM_SPEED
 	end
 	if (btn(2)) then
-		cam.x += cam.r.cos * 2
-		cam.y += cam.r.sin * 2
+		cam.x += cam.rot.cos * CAM_SPEED
+		cam.y += cam.rot.sin * CAM_SPEED
 	end
 	if (btn(3)) then
-		cam.x -= cam.r.cos * 2
-		cam.y -= cam.r.sin * 2
+		cam.x -= cam.rot.cos * CAM_SPEED
+		cam.y -= cam.rot.sin * CAM_SPEED
 	end
-	if (btn(4)) cam.h += 2 cam.t -= 1
-	if (btn(5)) cam.h -= 2 cam.t += 1
+	if (btn(4)) then 
+		cam.z += 2 cam.tilt -= 1 
+		--rotate_cam(cam.r.rad+0.005)
+	end
+	if (btn(5)) then
+		cam.z -= 2 cam.tilt += 1 
+		--rotate_cam(cam.r.rad-0.005)
+	end
 end
 
 -- Built-in draw function
 function _draw()
 	cls(0)
 	render_terrain()
-	print("cam: x="..cam.x.." y="..cam.y.." r="..cam.r.rad.." h="..cam.h.." t="..cam.t,0,0,7)
+	print("cam: x="..cam.x.." y="..cam.y.." z="..cam.z.." rot="..cam.rot.rad.." tilt="..cam.tilt,0,0,7)
 	print("cpu: "..stat(1),0,8,7)
 	print("fps: "..stat(7),0,16,7)
 	print("res: "..WIDTH.."x"..HEIGHT,0,24,7)
-
 end
 
 -- Rotate camera
 function rotate_cam(drad)
-	cam.r.rad += drad
-	cam.r.sin = sin(cam.r.rad)
-	cam.r.cos = cos(cam.r.rad)
-	cam.c.l.x = cam.r.cos * cam.c.z + cam.r.sin * cam.c.z
-	cam.c.l.y = cam.r.sin * cam.c.z - cam.r.cos * cam.c.z
-	cam.c.r.x = cam.r.cos * cam.c.z - cam.r.sin * cam.c.z
-	cam.c.r.y = cam.r.sin * cam.c.z + cam.r.cos * cam.c.z
+	cam.rot.rad += drad
+	cam.rot.sin = sin(cam.rot.rad)
+	cam.rot.cos = cos(cam.rot.rad)
+	cam.clip.left.x = cam.rot.cos * cam.clip.dist + cam.rot.sin * cam.clip.dist
+	cam.clip.left.y = cam.rot.sin * cam.clip.dist - cam.rot.cos * cam.clip.dist
+	cam.clip.right.x = cam.rot.cos * cam.clip.dist - cam.rot.sin * cam.clip.dist
+	cam.clip.right.y = cam.rot.sin * cam.clip.dist + cam.rot.cos * cam.clip.dist
 end
 
 -- Load new terrain
@@ -99,38 +104,33 @@ end
 
 -- Render terrain
 function render_terrain()
-	for x=0,WIDTH-1,3 do
-		local dx = (cam.c.l.x + (cam.c.r.x - cam.c.l.x) / WIDTH * x ) / cam.c.z
-		local dy = (cam.c.l.y + (cam.c.r.y - cam.c.l.y) / WIDTH * x ) / cam.c.z
-		local z = 1
-		local dz = 3
-		local rx = cam.x
-		local ry = cam.y
-		local j = 0
-		local h = 0
-		local prev_h = 0
+	for x=0,WIDTH-1,WIDTH_STEP do
+		local dx = (cam.clip.left.x + (cam.clip.right.x - cam.clip.left.x) / WIDTH * x ) / cam.clip.dist -- delta x, x distance to move per z
+		local dy = (cam.clip.left.y + (cam.clip.right.y - cam.clip.left.y) / WIDTH * x ) / cam.clip.dist -- delta y, y distance to move per z
+		local rx = cam.x     -- x position on map to render
+		local ry = cam.y     -- y position on map to render
+		local i = 0          -- index for color / heightmap
+		local h = 0          -- height for this coordinate
 		local max_h = HEIGHT
-
-		--while z<cam.c.z do
-		for z=1,cam.c.z,3 do
-			rx += dx*3
-			ry += dy*3
-			j = flr(rx % MAP_SIZE) + flr(ry % MAP_SIZE) * MAP_SIZE + 1
-			if(j<1)j=1
-			if(j>MAP_SIZE*MAP_SIZE)j=MAP_SIZE*MAP_SIZE
-			h = ((cam.h - terrain.height[j]) * SCALE_FACTOR) // z + cam.t
+		for depth=1, cam.clip.dist, DEPTH_STEP do
+			-- Increment render pos x and y
+			rx += dx * DEPTH_STEP
+			ry += dy * DEPTH_STEP
+			-- Get terrain index
+			i = flr(rx % MAP_SIZE) + flr(ry % MAP_SIZE) * MAP_SIZE + 1
+			if (i < 1) i = 1
+			if (i > MAP_SIZE * MAP_SIZE) i = MAP_SIZE * MAP_SIZE
+			-- Get terrain height
+			h = ((cam.z - terrain.height[i]) * SCALE_FACTOR) // depth + cam.tilt
 			if (h < 0) h = 0
 			if (h > HEIGHT) h = HEIGHT - 1
+			-- Render terrain if taller than previous tallest
 			if (h < max_h) then
-				rectfill(x, h, x+2, max_h, terrain.color[j])
+				rectfill(x, h, x+WIDTH_STEP-1, max_h, terrain.color[i])
 				max_h = h
 			end
-			--z+=dz
-			--dz = (prev_h-h > 12 and 1) or (prev_h-h > 6 and 2) or 3
-			--prev_h = h
 		end
 	end
-	print(start_z,200,0,7)
 end
 :: terrain/0.lua
 --[[pod_format="raw",created="2025-12-13 12:57:39",modified="2025-12-14 11:43:53",revision=16]]
@@ -1163,23 +1163,23 @@ terrain1 = { palette = "grass", height = {57,54,52,50,46,44,42,40,37,35,33,31,30
 ,55,53,51,49,46,44,42,40,37,35,33,31,28,26,25,24,23,19,16,11,9,5,6,6,6,6,6,6,6,6,6,6,6,5,5,5,5,6,7,7,12,16,16,16,16,16,18,20,23,26,27,28,31,34,37,37,37,36,34,32,32,33,34,34,32,32,31,32,34,39,51,66,75,80,84,84,84,84,84,85,85,84,85,86,87,90,91,92,94,96,99,101,103,104,104,104,104,106,107,107,106,105,106,106,107,108,109,110,111,113,113,111,110,110,110,109,109,109,109,109,109,109,108,106,105,104,103,103,103,103,103,103,102,102,101,101,101,101,101,100,99,97,94,92,90,90,91,91,92,91,88,85,79,77,78,81,84,86,86,83,80,75,71,69,70,73,75,76,77,76,75,74,75,78,79,77,71,65,60,55,49,45,42,41,42,44,51,57,64,68,70,69,68,67,68,68,69,73,75,74,71,70,69,67,65,62,64,62,58,55,51,47,46,47,47,46,46,46,46,46,47,45,44,44,45,45,46,47,50,51,51,53,56,57,56,57,57,56,56,54,53,51,49,46,45,44,41,39,37,34,32,31,31,32,32,32,33,34,33,33,34,35,34,34,35,37,41,44,49,53,56,60,58,58,57,53,49,42,34,27,20,16,13,13,12,11,11,11,12,16,23,24,20,16,13,13,14,20,26,32,39,41,43,45,49,54,60,61,60,58,61,64,66,68,70,68,67,64,62,60,57,54,53,51,49,47,44,42,41,39,36,34,32,31,30,30,28,27,26,26,25,23,21,20,20,19,18,19,19,18,17,16,17,17,16,17,16,13,11,10,7,6,5,5,3,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,6,9,12,14,18,20,23,24,24,24,24,24,26,26,27,28,28,27,28,28,28,28,27,25,25,26,27,27,28,28,30,31,31,30,31,32,31,31,32,33,33,33,33,33,33,32,31,32,34,37,42,46,53,61,68,73,76,77,75,74,74,76,76,75,73,66,62,64,73,80,83,82,79,77,71,68,74,83,87,86,80,77,78,79,80,78,73,68,67,69,75,77,76,76,79,82,81,84,88,91,95,98,99,99,97,97,98,98,95,94,92,88,84,79,76,71,68,67,65,63,62,60,60
 }}
 :: .info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 13:11:53",runtime=24,workspaces={{location="main.lua#105",workspace_index=1},{location="terrain/0.lua#1",workspace_index=1},{location="terrain/1.lua#1",workspace_index=1},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:38",runtime=24,workspaces={{location="main.lua#7",workspace_index=1},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
 :: gfx/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 13:11:53"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:38"]]
 :: gfx/0.gfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTEyLTEzIDE0OjI2OjM2Iixtb2RpZmllZD0iMjAyNS0x
 Mi0xMyAxNDoyNjozNiIscmV2aXNpb249MF1dbHo0AH4AAAASMQAA8yF7WzBdPXtibXA9cHh1AEMg
 EBAE8FYHEAfAF9AXwAcQB-BWLGZsYWdzPTAscGFuX3gIAMt5PTAsem9vbT04fSw_AB-wMQD-----
 -----------------------------------------------------------XUG09OH19
 :: map/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 13:11:53"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:38"]]
 :: map/0.map
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE3IDEwOjM1OjQ4Iixtb2RpZmllZD0iMjAyNS0x
 Mi0xMiAxNjoyMTo1NSIscmV2aXNpb249Ml1dbHo0AEwAAABQAAAA8Rx7e2JtcD1weHUATIAgIAD-
 AAD---8DLGhpZGRlbj1mYWxzZSxwYW5feD0wCADSeT0wLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9
 fQ==
 :: sfx/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 13:11:53"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:38"]]
 :: sfx/0.sfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA3LTMxIDA4OjMwOjI4Iixtb2RpZmllZD0iMjAyNS0w
 Ny0zMSAwODozMDoyOCIscmV2aXNpb249MF1dbHo0AKAAAAALCgAA-zBweHUAAygAAAQABA9AEAIO
@@ -1187,7 +1187,7 @@ AAGgASACoA4ADxAADfDKAQIDQA8PkAQFBgdADJAICQoLQAyQDwwPDQ8ODEAM8P8BAOv-J6oBEAYP
 MBABIAEgAfAAAhACDhABIA8hIAEwD0Dwww8oD--wxg-4Cg--D4AP9w8NAfAJARAGDjAA------_9
 H-8BAKzPyA9AAA8QQP--sPD-AQD-6lD-----KQ==
 :: terrain/.info.pod
---[[pod,created="2025-12-13 14:29:47",modified="2025-12-14 13:11:53"]]
+--[[pod,created="2025-12-13 14:29:47",modified="2025-12-14 18:03:38"]]
 :: terrain/0.png
 b64$iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAACXBIWXMAAAsTAAALEwEAmpwY
 AAAHEGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJX
@@ -11340,7 +11340,7 @@ z2tyzgBIRMhIAzCGZMXvIXi6hIWOTPJI-MatWv6xjsx-KZ8-hv2gx2OZDwLcrMp1QO5ZaFV4xW3a
 FJHKGh5arlDEUuOOMpnZXIo_BARGGVyn_zQ3CK7xosywBXVQbM5LPM1KjRoBhMpVWcDKsXoVWhig
 ambzobDGcsurja3_0hD9f5Iy3-FnC8maAAAAAElFTkSuQmCC
 :: terrain/palette/.info.pod
---[[pod,created="2025-12-14 11:38:24",modified="2025-12-14 13:11:53"]]
+--[[pod,created="2025-12-14 11:38:24",modified="2025-12-14 18:03:38"]]
 :: terrain/palette/grass.pal
 b64$LS1bW3BvZCxiZ19jb2xvcj0wLGJsYWNrZXN0X2NvbG9yPTAsY3JlYXRlZD0iMjAyNS0xMi0x
 MyAwMjoxNzo1NiIsaGlkZGVuPXtbMF09ZmFsc2UsZmFsc2UsZmFsc2UsZmFsc2UsZmFsc2UsZmFs
