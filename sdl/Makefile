@@ -1,2 +1,4 @@
 Run:
-	odin run voxel.odin -file
+	odin run .
+Clean:
+	find . -type f ! -name "*.?*" -delete

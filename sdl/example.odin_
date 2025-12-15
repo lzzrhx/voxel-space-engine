@@ -1,4 +1,4 @@
-package main
+package example
 
 import "core:fmt"
 import "core:slice"
@@ -17,7 +17,7 @@ Directions :: enum {
     West
 }
 
-main :: proc() {
+example :: proc() {
     fmt.println("heyo!")
 
     // Declarations
