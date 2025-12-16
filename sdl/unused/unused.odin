@@ -1,5 +1,3 @@
-
-/*
 DIGIT_0 :u64: 0b01111100_10001010_10010010_10100010_01111100
 DIGIT_1 :u64: 0b00000000_01000010_11111110_00000010_00000000
 DIGIT_2 :u64: 0b01000110_10001010_10010010_10100010_01000010
@@ -10,9 +8,8 @@ DIGIT_6 :u64: 0b01111100_10010010_10010010_10010010_00001100
 DIGIT_7 :u64: 0b10000110_10001000_10010000_10100000_11000000
 DIGIT_8 :u64: 0b01101100_10010010_10010010_10010010_01101100
 DIGIT_9 :u64: 0b01100000_10010010_10010010_10010010_01111100
-*/
 
-/*
+// Draw 8x5 digits
 draw_digit_small :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
     bits := DIGIT_0
     switch n {
@@ -44,19 +41,8 @@ draw_digit_small :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
         }
     } 
 }
-*/
 
-/*
-terrain_height_at_i :: proc(terrain: ^Terrain, i: int) -> u8 {
-    return terrain.height[i]
-}
-
-terrain_height_at_x_y :: proc(terrain: ^Terrain, x, y: int) -> u8 {
-    return terrain_height_at_i(terrain, x + y * TERRAIN_SIZE)
-}
-*/
-
-// used for convert font to bits
+// Convert 16x8 font in .png format to u128 bits
 convert_png_to_bits :: proc() {
     img := img_load("chars.png")
     defer image.destroy(img)

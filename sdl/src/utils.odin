@@ -18,9 +18,9 @@ img_load :: proc(path: string) -> ^image.Image {
     return img
 }
 
-img_4ch_color_at :: proc(img: ^image.Image, i: int) -> (u32) {
-    if i*4+2 < len(img.pixels.buf) {
-        return u32(img.pixels.buf[i*4]) | u32(img.pixels.buf[i*4+1]) << 8 | u32(img.pixels.buf[i*4+2]) << 16
+img_color_at :: proc(img: ^image.Image, i: int) -> (u32) {
+    if i*img.channels+2 < len(img.pixels.buf) {
+        return u32(img.pixels.buf[i*img.channels]) | u32(img.pixels.buf[i*img.channels+1]) << 8 | u32(img.pixels.buf[i*img.channels+2]) << 16
     }
     return 0
 }

@@ -53,7 +53,7 @@ terrain_render :: proc(colorbuffer: []u32, camera: ^Camera, terrain: ^Terrain) {
             }
             if height < max_height {
                 for y in height ..< max_height {
-                    draw_pixel(colorbuffer[:], x, y, img_4ch_color_at(terrain.colormap, i))
+                    draw_pixel(colorbuffer[:], x, y, img_color_at(terrain.colormap, i))
                 }
                 max_height = height
             }

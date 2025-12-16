@@ -13,8 +13,8 @@ WINDOW_FLAGS :: sdl2.WindowFlags{.SHOWN}
 TERRAIN_SIZE :: 1024
 SCALE_FACTOR :: 300
 CAM_SPEED :f32: 5.0
-COLORMAP_PATH :: "color.png"
-HEIGHTMAP_PATH :: "height.png"
+COLORMAP_PATH :: "./terrain/color.png"
+HEIGHTMAP_PATH :: "./terrain/height.png"
 
 // Program entry-point
 main :: proc() {

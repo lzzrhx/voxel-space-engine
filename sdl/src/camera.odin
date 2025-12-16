@@ -14,8 +14,8 @@ Camera :: struct {
     prx: f32,
     pry: f32,
 }
-camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
 
+camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
     if f32(terrain_height_at_x_y(terrain, camera.x + x, camera.y + y) + 10) < camera.z {
         camera.x += x
         camera.y += y
@@ -30,6 +30,7 @@ camera_change_height :: proc(terrain: ^Terrain, camera: ^Camera, z: f32) {
         camera_update(camera)
     }
 }
+
 camera_update :: proc(camera: ^Camera) {
     sin := math.sin_f32(camera.rot)
     cos := math.cos_f32(camera.rot)
