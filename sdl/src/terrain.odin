@@ -39,23 +39,30 @@ terrain_render :: proc(colorbuffer: []u32, camera: ^Camera, terrain: ^Terrain) {
         dy: f32 = (camera.ply + (camera.pry - camera.ply) / f32(RENDER_WIDTH) * f32(x)) / camera.clip
         rx := camera.x
         ry := camera.y
-        max_height: int = RENDER_HEIGHT
-        for z in 1 ..< camera.clip {
+        irx : int
+        iry : int
+        z : int
+        i : int
+        first := true
+        max_z: int = RENDER_HEIGHT
+        for depth in 1 ..< int(camera.clip) {
             rx += dx
             ry += dy
-            i: int = (int(rx) & (TERRAIN_SIZE-1)) + (int(ry) & (TERRAIN_SIZE-1)) * TERRAIN_SIZE
-            height: int = int((f32(camera.z) - f32(terrain.height[i])) / f32(z) * f32(SCALE_FACTOR) + camera.tilt)
-            if height < 0 {
-                height = 0
-            }
-            if height > RENDER_HEIGHT {
-                height = RENDER_HEIGHT - 1
-            }
-            if height < max_height {
-                for y in height ..< max_height {
+            irx = int(rx)
+            iry = int(ry)
+            if irx < 0 || irx > TERRAIN_SIZE-1 || iry < 0 || iry > TERRAIN_SIZE-1 { continue }
+            i = irx + iry * TERRAIN_SIZE
+            z = int((camera.z - f32(terrain.height[i])) / f32(depth) * SCALE_FACTOR + camera.tilt)
+            if z < 0 { z = 0 }
+            else if z > RENDER_HEIGHT { z = RENDER_HEIGHT }
+            if z < max_z {
+                if max_z == RENDER_HEIGHT && (iry == TERRAIN_SIZE-1 || irx == 0 || irx == TERRAIN_SIZE-1) { 
+                    max_z = z+1
+                }
+                for y in z ..< max_z {
                     draw_pixel(colorbuffer[:], x, y, img_color_at(terrain.colormap, i))
                 }
-                max_height = height
+                max_z = z
             }
         }
     }

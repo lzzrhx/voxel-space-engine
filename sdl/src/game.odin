@@ -15,7 +15,6 @@ Game :: struct {
     camera: ^Camera,
     terrain: ^Terrain,
     keystate: [^]u8,
-    ui_txt: string,
 }
 
 init :: proc(game: ^Game) {
@@ -27,7 +26,6 @@ init :: proc(game: ^Game) {
     terrain_load(game.terrain)
     camera_update(game.camera)
     game.keystate = sdl2.GetKeyboardState(nil)
-    game.ui_txt = "abdefghijklmnopqrstuvwxyz"
 }
 
 input :: proc(game: ^Game) {
@@ -44,16 +42,18 @@ input :: proc(game: ^Game) {
         }
     }
     if game.keystate[sdl2.SCANCODE_LEFT] == 1 {
-        camera_move(game.terrain, game.camera, -math.sin_f32(game.camera.rot) * CAM_SPEED, -math.cos_f32(game.camera.rot) * CAM_SPEED)
+        camera_move(game.terrain, game.camera, -CAM_SPEED, 0.0)
     }
     if game.keystate[sdl2.SCANCODE_RIGHT] == 1 {
-        camera_move(game.terrain, game.camera, math.sin_f32(game.camera.rot) * CAM_SPEED, math.cos_f32(game.camera.rot) * CAM_SPEED)
+        camera_move(game.terrain, game.camera, CAM_SPEED, 0.0)
     }
     if game.keystate[sdl2.SCANCODE_UP] == 1 {
-        camera_move(game.terrain, game.camera, math.cos_f32(game.camera.rot) * CAM_SPEED, math.sin_f32(game.camera.rot) * CAM_SPEED)
+        //camera_move(game.terrain, game.camera, math.cos_f32(game.camera.rot) * CAM_SPEED, math.sin_f32(game.camera.rot) * CAM_SPEED)
+        camera_move(game.terrain, game.camera, 0.0, -CAM_SPEED)
     }
     if game.keystate[sdl2.SCANCODE_DOWN] == 1 {
-        camera_move(game.terrain, game.camera, -math.cos_f32(game.camera.rot) * CAM_SPEED, -math.sin_f32(game.camera.rot) * CAM_SPEED)
+        //camera_move(game.terrain, game.camera, -math.cos_f32(game.camera.rot) * CAM_SPEED, -math.sin_f32(game.camera.rot) * CAM_SPEED)
+        camera_move(game.terrain, game.camera, 0.0, CAM_SPEED)
     }
     if game.keystate[sdl2.SCANCODE_A] == 1 {
         game.camera.rot -= 0.03
@@ -82,7 +82,7 @@ draw :: proc(game: ^Game, fps: int) {
     }
     terrain_render(game.colorbuffer[:], game.camera, game.terrain)
     draw_int(game.colorbuffer[:], fps, 10, 10, 0x00ff00)
-    draw_string(game.colorbuffer[:], game.ui_txt, 10, 26, 0xffffff)
+    draw_string(game.colorbuffer[:], game.camera.txt, 10, 26, 0xffffff)
     sdl2.UpdateTexture(
         game.render_texture,
         nil,

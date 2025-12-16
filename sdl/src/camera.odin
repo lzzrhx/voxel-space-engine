@@ -1,6 +1,7 @@
 package main
 
 import "core:math"
+import "core:fmt"
 
 Camera :: struct {
     x: f32,
@@ -13,6 +14,7 @@ Camera :: struct {
     ply: f32,
     prx: f32,
     pry: f32,
+    txt: string,
 }
 
 camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
@@ -24,7 +26,7 @@ camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
 }
 
 camera_change_height :: proc(terrain: ^Terrain, camera: ^Camera, z: f32) {
-    if camera.z + z < 400 && camera.z + z > 40 && f32(terrain_height_at_x_y(terrain, camera.x, camera.y) + 10) < camera.z + z {
+    if camera.z + z < 400 && camera.z + z > 100 && f32(terrain_height_at_x_y(terrain, camera.x, camera.y) + 10) < camera.z + z {
         camera.z += z
         camera.tilt += f32(z) * -0.5
         camera_update(camera)
@@ -38,5 +40,5 @@ camera_update :: proc(camera: ^Camera) {
     camera.ply = sin * camera.clip - cos * camera.clip
     camera.prx = cos * camera.clip - sin * camera.clip
     camera.pry = sin * camera.clip + cos * camera.clip
-    //fmt.printf("camera: x=%v y=%v z=%v tilt=%v\n", camera.x, camera.y, camera.z, camera.tilt)
+    camera.txt = fmt.tprintf("camera: x=%v y=%v z=%v tilt=%v", camera.x, camera.y, camera.z, camera.tilt)
 }

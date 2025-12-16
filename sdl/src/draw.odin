@@ -37,17 +37,17 @@ draw_u128 :: proc(colorbuffer: []u32, bits: u128, x, y: int, color: u32) {
 }
 
 draw_digit :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
-    bits := DIGIT_0
+    bits := CHAR_0
     switch n {
-    case 1: bits = DIGIT_1
-    case 2: bits = DIGIT_2
-    case 3: bits = DIGIT_3
-    case 4: bits = DIGIT_4
-    case 5: bits = DIGIT_5
-    case 6: bits = DIGIT_6
-    case 7: bits = DIGIT_7
-    case 8: bits = DIGIT_8
-    case 9: bits = DIGIT_9
+    case 1: bits = CHAR_1
+    case 2: bits = CHAR_2
+    case 3: bits = CHAR_3
+    case 4: bits = CHAR_4
+    case 5: bits = CHAR_5
+    case 6: bits = CHAR_6
+    case 7: bits = CHAR_7
+    case 8: bits = CHAR_8
+    case 9: bits = CHAR_9
     }
     draw_u128(colorbuffer, bits, x, y, color)
 }
@@ -55,6 +55,16 @@ draw_digit :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
 draw_rune :: proc(colorbuffer: []u32, letter: rune, x, y: int, color: u32) {
     bits := CHAR_QUESTION
     switch letter {
+    case '0': bits = CHAR_0
+    case '1': bits = CHAR_1
+    case '2': bits = CHAR_2
+    case '3': bits = CHAR_3
+    case '4': bits = CHAR_4
+    case '5': bits = CHAR_5
+    case '6': bits = CHAR_6
+    case '7': bits = CHAR_7
+    case '8': bits = CHAR_8
+    case '9': bits = CHAR_9
     case 'a': bits = CHAR_LC_A
     case 'b': bits = CHAR_LC_B
     case 'c': bits = CHAR_LC_C
@@ -171,6 +181,6 @@ draw_int :: proc(colorbuffer: []u32, m, x, y: int, color: u32) {
 
 draw_string :: proc(colorbuffer: []u32, txt: string, x, y: int, color: u32) {
     for c, i in txt {
-        draw_rune(colorbuffer, c, x+i*9, y, color)
+        if c != ' ' { draw_rune(colorbuffer, c, x+i*9, y, color) }
     }
 }
