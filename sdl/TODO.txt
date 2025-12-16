@@ -1,8 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 // TODO:
 ///////////////////////////////////////////////////////////////////////////////
- 
- x draw_line :: proc()
- - draw_number :: proc()
- - calculate delta time and delay frames
- x convert heightmap to u8 array
+
+ x Add FPS counter
+ x Add number and font rendering
+ x Avoid camera terrain collision
+ - Add dithering
+ - Add dithered fog in the distance
+ - Camera movement based on target position (with rotation)

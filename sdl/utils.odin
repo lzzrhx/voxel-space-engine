@@ -5,6 +5,7 @@ import "core:image"
 import "core:image/png"
 import "core:log"
 import "core:os"
+import "core:math"
 
 img_load :: proc(path: string) -> ^image.Image {
     img,img_err := image.load(path, image.Options{.return_metadata})
@@ -23,3 +24,9 @@ img_4ch_color_at :: proc(img: ^image.Image, i: int) -> (u32) {
     }
     return 0
 }
+
+int_digits :: proc(n: int) -> int {
+    if math.abs(n) < 10 { return 1 }
+    return 1 + int_digits(n / 10)
+}
+

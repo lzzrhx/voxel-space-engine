@@ -1,10 +1,12 @@
 package main
 
 import "core:math"
+import "core:strings"
+
 
 draw_pixel :: proc(colorbuffer: []u32, x, y: int, color: u32) {
-    if x > 0 && x < WINDOW_WIDTH && y > 0 && y < WINDOW_HEIGHT {
-        colorbuffer[int(x + y * WINDOW_WIDTH)] = color
+    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT {
+        colorbuffer[int(x + y * RENDER_WIDTH)] = color
     }
 }
 
@@ -20,5 +22,155 @@ draw_line :: proc(colorbuffer: []u32, x0, y0, x1, y1: int, color: u32) {
         draw_pixel(colorbuffer, int(math.round_f32(x)), int(math.round_f32(y)), color)
         x += dx
         y += dy
+    }
+}
+
+draw_u128 :: proc(colorbuffer: []u32, bits: u128, x, y: int, color: u32) {
+    for i in 0 ..< 8 {
+        for j in 0 ..< 16 {
+            bit := u128(0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_0000000_00000000_00000000_00000000_000000000) >> u128(j+i*16)
+            if bits & bit == bit {
+                draw_pixel(colorbuffer, x + i, y + j, color)
+            }
+        }
+    }
+}
+
+draw_digit :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
+    bits := DIGIT_0
+    switch n {
+    case 1: bits = DIGIT_1
+    case 2: bits = DIGIT_2
+    case 3: bits = DIGIT_3
+    case 4: bits = DIGIT_4
+    case 5: bits = DIGIT_5
+    case 6: bits = DIGIT_6
+    case 7: bits = DIGIT_7
+    case 8: bits = DIGIT_8
+    case 9: bits = DIGIT_9
+    }
+    draw_u128(colorbuffer, bits, x, y, color)
+}
+
+draw_rune :: proc(colorbuffer: []u32, letter: rune, x, y: int, color: u32) {
+    bits := CHAR_QUESTION
+    switch letter {
+    case 'a': bits = CHAR_LC_A
+    case 'b': bits = CHAR_LC_B
+    case 'c': bits = CHAR_LC_C
+    case 'd': bits = CHAR_LC_D
+    case 'e': bits = CHAR_LC_E
+    case 'f': bits = CHAR_LC_F
+    case 'g': bits = CHAR_LC_G
+    case 'h': bits = CHAR_LC_H
+    case 'i': bits = CHAR_LC_I
+    case 'j': bits = CHAR_LC_J
+    case 'k': bits = CHAR_LC_K
+    case 'l': bits = CHAR_LC_L
+    case 'm': bits = CHAR_LC_M
+    case 'n': bits = CHAR_LC_N
+    case 'o': bits = CHAR_LC_O
+    case 'p': bits = CHAR_LC_P
+    case 'q': bits = CHAR_LC_Q
+    case 'r': bits = CHAR_LC_R
+    case 's': bits = CHAR_LC_S
+    case 't': bits = CHAR_LC_T
+    case 'u': bits = CHAR_LC_U
+    case 'v': bits = CHAR_LC_V
+    case 'w': bits = CHAR_LC_W
+    case 'x': bits = CHAR_LC_X
+    case 'y': bits = CHAR_LC_Y
+    case 'z': bits = CHAR_LC_Z
+    case 'A': bits = CHAR_A
+    case 'B': bits = CHAR_B
+    case 'C': bits = CHAR_C
+    case 'D': bits = CHAR_D
+    case 'E': bits = CHAR_E
+    case 'F': bits = CHAR_F
+    case 'G': bits = CHAR_G
+    case 'H': bits = CHAR_H
+    case 'I': bits = CHAR_I
+    case 'J': bits = CHAR_J
+    case 'K': bits = CHAR_K
+    case 'L': bits = CHAR_L
+    case 'M': bits = CHAR_M
+    case 'N': bits = CHAR_N
+    case 'O': bits = CHAR_O
+    case 'P': bits = CHAR_P
+    case 'Q': bits = CHAR_Q
+    case 'R': bits = CHAR_R
+    case 'S': bits = CHAR_S
+    case 'T': bits = CHAR_T
+    case 'U': bits = CHAR_U
+    case 'V': bits = CHAR_V
+    case 'W': bits = CHAR_W
+    case 'X': bits = CHAR_X
+    case 'Y': bits = CHAR_Y
+    case 'Z': bits = CHAR_Z
+    case '+': bits = CHAR_PLUS
+    case '\\': bits = CHAR_BACKSLASH
+    case '!': bits = CHAR_EXCLAMATION
+    case '"': bits = CHAR_QUOTATION
+    case '#': bits = CHAR_HASH
+    case '%': bits = CHAR_PERCENT
+    case '&': bits = CHAR_AMPERSAND
+    case '/': bits = CHAR_SLASH
+    case '(': bits = CHAR_L_PAR
+    case ')': bits = CHAR_R_PAR
+    case '=': bits = CHAR_EQ
+    case '?': bits = CHAR_QUESTION
+    case '`': bits = CHAR_BACKTICK
+    case '@': bits = CHAR_AT
+    case '$': bits = CHAR_DOLLAR
+    case '{': bits = CHAR_L_CURLY_BRACKET
+    case '[': bits = CHAR_L_BRACKET
+    case ']': bits = CHAR_R_BRACKET
+    case '}': bits = CHAR_R_CURLY_BRACKET
+    case '^': bits = CHAR_CARET
+    case '~': bits = CHAR_TILDE
+    case '*': bits = CHAR_ASTERISK
+    case '\'': bits = CHAR_APOSTROPHE
+    case ',': bits = CHAR_COMMA
+    case ';': bits = CHAR_SEMICOLON
+    case '.': bits = CHAR_DOT
+    case ':': bits = CHAR_COLON
+    case '-': bits = CHAR_MINUS
+    case '_': bits = CHAR_UNDERSCORE
+    case '<': bits = CHAR_LT
+    case '>': bits = CHAR_GT
+    case '☺': bits = CHAR_SMILE1
+    case '☻': bits = CHAR_SMILE2
+    case '♥': bits = CHAR_HEART
+    case '♦': bits = CHAR_DIAMONDS
+    case '♣': bits = CHAR_CLUBS
+    case '♠': bits = CHAR_SPADES
+    case '•': bits = CHAR_BULLET
+    case '♂': bits = CHAR_MALE
+    case '♀': bits = CHAR_FEMALE
+    case '♪': bits = CHAR_NOTE
+    case '♫': bits = CHAR_NOTE2
+    case '►': bits = CHAR_RIGHT
+    case '◄': bits = CHAR_LEFT
+    case '↑': bits = CHAR_U_ARROW
+    case '↓': bits = CHAR_D_ARROW
+    case '→': bits = CHAR_R_ARROW
+    case '←': bits = CHAR_L_ARROW
+    case '▲': bits = CHAR_UP
+    case '▼': bits = CHAR_DOWN
+    }
+    draw_u128(colorbuffer, bits, x, y, color)
+}
+
+draw_int :: proc(colorbuffer: []u32, m, x, y: int, color: u32) {
+    for i, n := int_digits(m), m; n > 0;  {
+        draw_digit(colorbuffer[:], n%10, x+(i-1)*9, y, color)
+        n /= 10
+        i -= 1
+    }
+}
+
+draw_string :: proc(colorbuffer: []u32, txt: string, x, y: int, color: u32) {
+    for c, i in txt {
+        draw_rune(colorbuffer, c, x+i*9, y, color)
     }
 }
