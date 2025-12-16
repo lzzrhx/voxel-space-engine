@@ -2,9 +2,6 @@
 // TODO:
 ///////////////////////////////////////////////////////////////////////////////
 
- x Add FPS counter
- x Add number and font rendering
- x Avoid camera terrain collision
  - Add dithering
  - Add dithered fog in the distance
  - Camera movement based on target position (with rotation)

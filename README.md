@@ -7,3 +7,5 @@ The render algorithm is also explained by Sebastian Macke [here](https://github.
 The folder doslike contains a version for the [DOS-like](https://github.com/mattiasgustavsson/dos-like) framework written in the C programming language.
 
 The folder picotron contains a version for the [Picotron](https://www.lexaloffle.com/picotron.php) fantasy console written in Lua.
+
+The folder sdl contains a version using SDL2 written in Odin.
