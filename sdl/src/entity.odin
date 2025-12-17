@@ -9,9 +9,13 @@ Entity :: struct {
     sprite: ^image.Image,
 }
 
-entities_new :: proc(entities: ^[dynamic]Entity, x, y: int) {
+entity_new :: proc(entities: ^[dynamic]Entity, x, y: int) {
     img := img_load(PLAYER_SPRITE)
     append(entities, Entity{x = x, y = y, sprite = img})
+}
+
+entity_destroy :: proc(entity: ^Entity) {
+    image.destroy(entity.sprite)
 }
 
 entities_render :: proc(colorbuffer: []u32, depthbuffer: []u16, camera: ^Camera, terrain: ^Terrain, entities: ^[dynamic]Entity) {

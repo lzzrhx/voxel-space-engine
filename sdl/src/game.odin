@@ -30,7 +30,7 @@ init :: proc(game: ^Game) {
     camera_update(game.camera)
     game.keystate = sdl2.GetKeyboardState(nil)
     game.entities = make([dynamic]Entity)
-    entities_new(&game.entities, 530, 280)
+    entity_new(&game.entities, 530, 280)
 }
 
 input :: proc(game: ^Game) {
@@ -87,6 +87,9 @@ draw :: proc(game: ^Game, fps: int) {
 }
 
 exit :: proc(game: ^Game) {
+    for &entity in game.entities {
+        entity_destroy(&entity)
+    }
     terrain_destroy(game.terrain)
     free(game.colorbuffer)
     free(game.depthbuffer)
