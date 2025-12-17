@@ -58,3 +58,10 @@ convert_png_to_bits :: proc() {
         fmt.printf("CHAR_%v :u128: %#b\n",i,n)
     }
 }
+
+//camera_move(game.terrain, game.camera, -math.cos_f32(game.camera.rot) * CAM_SPEED, -math.sin_f32(game.camera.rot) * CAM_SPEED)
+//camera_move(game.terrain, game.camera, math.cos_f32(game.camera.rot) * CAM_SPEED, math.sin_f32(game.camera.rot) * CAM_SPEED)
+    /*
+    for i := 0; i < RENDER_HEIGHT * RENDER_WIDTH; i+=1 {
+        if f32(game.depthbuffer[i]) / f32(game.camera.clip) > 0.5 { color_set_brightness(&game.colorbuffer[i], 2.0 - f32(game.depthbuffer[i]) / f32(game.camera.clip) * 2) }
+    }*/

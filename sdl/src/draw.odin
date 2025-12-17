@@ -2,11 +2,25 @@ package main
 
 import "core:math"
 import "core:strings"
-
+import "core:image"
 
 draw_pixel :: proc(colorbuffer: []u32, x, y: int, color: u32) {
     if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT {
-        colorbuffer[int(x + y * RENDER_WIDTH)] = color
+        if (color != TRANSPARENT_COLOR) { colorbuffer[int(x + y * RENDER_WIDTH)] = color }
+    }
+}
+
+draw_pixel_at_depth :: proc(colorbuffer: []u32, depthbuffer: []u16, x, y, depth: int, color: u32) {
+    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT && depth > 0 {
+        if depthbuffer[x + y * RENDER_WIDTH] > u16(depth) {
+            draw_pixel(colorbuffer, x, y, color)
+        }
+    }
+}
+
+draw_depthbuffer_pixel :: proc(depthbuffer: []u16, x, y, depth: int) {
+    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT && depth > 0 {
+        depthbuffer[int(x + y * RENDER_WIDTH)] = u16(depth)
     }
 }
 
@@ -22,6 +36,17 @@ draw_line :: proc(colorbuffer: []u32, x0, y0, x1, y1: int, color: u32) {
         draw_pixel(colorbuffer, int(math.round_f32(x)), int(math.round_f32(y)), color)
         x += dx
         y += dy
+    }
+}
+
+draw_img_at_depth :: proc(colorbuffer: []u32, depthbuffer: []u16, img: ^image.Image, x, y: int, depth: f32) {
+    scale := RENDER_WIDTH * 0.5 / depth
+    height := int(f32(img.height) * scale)
+    for i in 0 ..< int(f32(img.width) * scale) {
+        for j in 0 ..< height {
+            color := img_color_at(img, int(f32(i) / scale), int(f32(j) / scale))
+            draw_pixel_at_depth(colorbuffer, depthbuffer, x + i, y - height + j, int(depth), color)
+        }
     }
 }
 

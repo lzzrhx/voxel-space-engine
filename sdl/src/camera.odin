@@ -18,7 +18,7 @@ Camera :: struct {
 }
 
 camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
-    if f32(terrain_height_at_x_y(terrain, camera.x + x, camera.y + y) + 10) < camera.z {
+    if f32(terrain_height_at(terrain, int(camera.x + x), int(camera.y + y)) + 10) < camera.z {
         camera.x += x
         camera.y += y
         camera_update(camera)
@@ -26,7 +26,7 @@ camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
 }
 
 camera_change_height :: proc(terrain: ^Terrain, camera: ^Camera, z: f32) {
-    if camera.z + z < 400 && camera.z + z > 100 && f32(terrain_height_at_x_y(terrain, camera.x, camera.y) + 10) < camera.z + z {
+    if camera.z + z < 400 && camera.z + z > 100 && f32(terrain_height_at(terrain, int(camera.x), int(camera.y)) + 10) < camera.z + z {
         camera.z += z
         camera.tilt += f32(z) * -0.5
         camera_update(camera)

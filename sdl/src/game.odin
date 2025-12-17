@@ -12,9 +12,11 @@ Game :: struct {
     renderer: ^sdl2.Renderer,
     render_texture: ^sdl2.Texture,
     colorbuffer: ^[RENDER_HEIGHT * RENDER_WIDTH]u32,
+    depthbuffer: ^[RENDER_HEIGHT * RENDER_WIDTH]u16,
     camera: ^Camera,
     terrain: ^Terrain,
     keystate: [^]u8,
+    entities: [dynamic]Entity,
 }
 
 init :: proc(game: ^Game) {
@@ -23,38 +25,32 @@ init :: proc(game: ^Game) {
         os.exit(1)
     }
     game.colorbuffer = new([RENDER_HEIGHT * RENDER_WIDTH]u32)
+    game.depthbuffer = new([RENDER_HEIGHT * RENDER_WIDTH]u16)
     terrain_load(game.terrain)
     camera_update(game.camera)
     game.keystate = sdl2.GetKeyboardState(nil)
+    game.entities = make([dynamic]Entity)
+    entities_new(&game.entities, 530, 280)
 }
 
 input :: proc(game: ^Game) {
     e: sdl2.Event
     for sdl2.PollEvent(&e) {
         #partial switch(e.type) {
-        case .QUIT:
-            game.running = false
+        case .QUIT: game.running = false
         case .KEYDOWN:
             #partial switch(e.key.keysym.sym) {
-            case .ESCAPE:
-                game.running = false
+            case .ESCAPE: game.running = false
             }
         }
     }
-    if game.keystate[sdl2.SCANCODE_LEFT] == 1 {
-        camera_move(game.terrain, game.camera, -CAM_SPEED, 0.0)
-    }
-    if game.keystate[sdl2.SCANCODE_RIGHT] == 1 {
-        camera_move(game.terrain, game.camera, CAM_SPEED, 0.0)
-    }
-    if game.keystate[sdl2.SCANCODE_UP] == 1 {
-        //camera_move(game.terrain, game.camera, math.cos_f32(game.camera.rot) * CAM_SPEED, math.sin_f32(game.camera.rot) * CAM_SPEED)
-        camera_move(game.terrain, game.camera, 0.0, -CAM_SPEED)
-    }
-    if game.keystate[sdl2.SCANCODE_DOWN] == 1 {
-        //camera_move(game.terrain, game.camera, -math.cos_f32(game.camera.rot) * CAM_SPEED, -math.sin_f32(game.camera.rot) * CAM_SPEED)
-        camera_move(game.terrain, game.camera, 0.0, CAM_SPEED)
-    }
+    if game.keystate[sdl2.SCANCODE_UP] == 1 { camera_move(game.terrain, game.camera, 0.0, -CAM_SPEED) }
+    if game.keystate[sdl2.SCANCODE_DOWN] == 1 { camera_move(game.terrain, game.camera, 0.0, CAM_SPEED) }
+    if game.keystate[sdl2.SCANCODE_LEFT] == 1 { camera_move(game.terrain, game.camera, -CAM_SPEED, 0.0) }
+    if game.keystate[sdl2.SCANCODE_RIGHT] == 1 { camera_move(game.terrain, game.camera, CAM_SPEED, 0.0) }
+    if game.keystate[sdl2.SCANCODE_W] == 1 { camera_change_height(game.terrain, game.camera, 3) }
+    if game.keystate[sdl2.SCANCODE_S] == 1 { camera_change_height(game.terrain, game.camera, -3) }
+    /*
     if game.keystate[sdl2.SCANCODE_A] == 1 {
         game.camera.rot -= 0.03
         camera_update(game.camera)
@@ -63,12 +59,7 @@ input :: proc(game: ^Game) {
         game.camera.rot += 0.03
         camera_update(game.camera)
     }
-    if game.keystate[sdl2.SCANCODE_W] == 1 {
-        camera_change_height(game.terrain, game.camera, 3)
-    }
-    if game.keystate[sdl2.SCANCODE_S] == 1 {
-        camera_change_height(game.terrain, game.camera, -3)
-    }
+    */
 }
 
 update :: proc(game: ^Game) {
@@ -78,11 +69,13 @@ draw :: proc(game: ^Game, fps: int) {
     sdl2.SetRenderDrawColor(game.renderer, 50, 50, 50, 0xff)
     sdl2.RenderClear(game.renderer)    
     for i := 0; i < RENDER_HEIGHT * RENDER_WIDTH; i+=1 {
-        game.colorbuffer[i] = 0x000000
+        game.colorbuffer[i] = 0x00000000
+        game.depthbuffer[i] = 0xFFFF
     }
-    terrain_render(game.colorbuffer[:], game.camera, game.terrain)
-    draw_int(game.colorbuffer[:], fps, 10, 10, 0x00ff00)
-    draw_string(game.colorbuffer[:], game.camera.txt, 10, 26, 0xffffff)
+    terrain_render(game.colorbuffer[:], game.depthbuffer[:], game.camera, game.terrain)
+    entities_render(game.colorbuffer[:], game.depthbuffer[:], game.camera, game.terrain, &game.entities)
+    draw_int(game.colorbuffer[:], fps, 1, 0, 0x00ff00)
+    draw_string(game.colorbuffer[:], game.camera.txt, 1, RENDER_HEIGHT-16, 0xffffff)
     sdl2.UpdateTexture(
         game.render_texture,
         nil,
@@ -96,6 +89,8 @@ draw :: proc(game: ^Game, fps: int) {
 exit :: proc(game: ^Game) {
     terrain_destroy(game.terrain)
     free(game.colorbuffer)
+    free(game.depthbuffer)
+    delete(game.entities)
     sdl2.DestroyWindow(game.window)
     sdl2.Quit()
 }

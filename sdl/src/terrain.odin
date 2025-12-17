@@ -1,6 +1,7 @@
 package main
 
 import "core:image"
+import "core:fmt"
 
 Terrain :: struct {
     colormap: ^image.Image,
@@ -29,11 +30,11 @@ terrain_height_at_i :: proc(terrain: ^Terrain, i: int) -> u8 {
     return 0
 }
 
-terrain_height_at_x_y :: proc(terrain: ^Terrain, x, y: f32) -> u8 {
-    return terrain_height_at_i(terrain, int(x) & (TERRAIN_SIZE-1) + (int(y) & (TERRAIN_SIZE-1)) * TERRAIN_SIZE)
+terrain_height_at :: proc(terrain: ^Terrain, x, y: int) -> u8 {
+    return terrain_height_at_i(terrain, x + y * TERRAIN_SIZE)
 }
 
-terrain_render :: proc(colorbuffer: []u32, camera: ^Camera, terrain: ^Terrain) {
+terrain_render :: proc(colorbuffer: []u32, depthbuffer: []u16, camera: ^Camera, terrain: ^Terrain) {
     for x in 0 ..< RENDER_WIDTH {
         dx: f32 = (camera.plx + (camera.prx - camera.plx) / f32(RENDER_WIDTH) * f32(x)) / camera.clip
         dy: f32 = (camera.ply + (camera.pry - camera.ply) / f32(RENDER_WIDTH) * f32(x)) / camera.clip
@@ -56,11 +57,10 @@ terrain_render :: proc(colorbuffer: []u32, camera: ^Camera, terrain: ^Terrain) {
             if z < 0 { z = 0 }
             else if z > RENDER_HEIGHT { z = RENDER_HEIGHT }
             if z < max_z {
-                if max_z == RENDER_HEIGHT && (iry == TERRAIN_SIZE-1 || irx == 0 || irx == TERRAIN_SIZE-1) { 
-                    max_z = z+1
-                }
+                if max_z == RENDER_HEIGHT && (iry == TERRAIN_SIZE-1 || irx == 0 || irx == TERRAIN_SIZE-1) { max_z = z+1 }
                 for y in z ..< max_z {
-                    draw_pixel(colorbuffer[:], x, y, img_color_at(terrain.colormap, i))
+                    draw_pixel(colorbuffer[:], x, y, img_color_at_i(terrain.colormap, i))
+                    draw_depthbuffer_pixel(depthbuffer[:], x, y, depth)
                 }
                 max_z = z
             }

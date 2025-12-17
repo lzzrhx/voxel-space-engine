@@ -20,6 +20,8 @@ SCALE_FACTOR :f32: 100
 CAM_SPEED :f32: 5.0
 COLORMAP_PATH :: "./terrain/color.png"
 HEIGHTMAP_PATH :: "./terrain/height.png"
+PLAYER_SPRITE :: "./guy.png"
+TRANSPARENT_COLOR :: 0xff00eb
 
 // Program entry-point
 main :: proc() {
