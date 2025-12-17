@@ -19,8 +19,11 @@ img_load :: proc(path: string) -> ^image.Image {
 }
 
 img_color_at_i :: proc(img: ^image.Image, i: int) -> u32 {
-    if i*img.channels+2 < len(img.pixels.buf) {
-        return u32(img.pixels.buf[i*img.channels]) | u32(img.pixels.buf[i*img.channels+1]) << 8 | u32(img.pixels.buf[i*img.channels+2]) << 16
+    if i*img.channels+img.channels-1 < len(img.pixels.buf) {
+        if (img.channels == 4) { return u32(img.pixels.buf[i*img.channels]) | u32(img.pixels.buf[i*img.channels+1]) << 8 | u32(img.pixels.buf[i*img.channels+2]) << 16 | u32(img.pixels.buf[i*img.channels+3]) << 24 }
+        if (img.channels == 3) { return u32(img.pixels.buf[i*img.channels]) | u32(img.pixels.buf[i*img.channels+1]) << 8 | u32(img.pixels.buf[i*img.channels+2]) << 16 }
+        if (img.channels == 2) { return u32(img.pixels.buf[i*img.channels]) | u32(img.pixels.buf[i*img.channels+1]) << 8 }
+        return u32(img.pixels.buf[i*img.channels])
     }
     return 0
 }

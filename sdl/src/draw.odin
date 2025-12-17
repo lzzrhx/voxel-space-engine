@@ -3,28 +3,42 @@ package main
 import "core:math"
 import "core:strings"
 import "core:image"
+import "vendor:sdl2"
+import "core:fmt"
 
-draw_pixel :: proc(colorbuffer: []u32, x, y: int, color: u32) {
-    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT {
-        if (color != TRANSPARENT_COLOR) { colorbuffer[int(x + y * RENDER_WIDTH)] = color }
+Colorbuffer :: struct {
+    buf: []u32,
+    texture: ^sdl2.Texture,
+    width: int,
+    height: int,
+    refresh: bool,
+}
+
+Depthbuffer :: struct {
+    buf: []u16,
+    width: int,
+    height: int,
+}
+
+Rect :: struct {
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+}
+
+Rects :: struct {
+    rects: []Rect,
+    num: int,
+}
+
+draw_pixel :: proc(colorbuffer: ^Colorbuffer, x, y: int, color: u32) {
+    if x >= 0 && x < colorbuffer.width && y >= 0 && y < colorbuffer.width {
+        if (color != TRANSPARENT_COLOR) { colorbuffer.buf[int(x + y * colorbuffer.width)] = color }
     }
 }
 
-draw_pixel_at_depth :: proc(colorbuffer: []u32, depthbuffer: []u16, x, y, depth: int, color: u32) {
-    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT && depth > 0 {
-        if depthbuffer[x + y * RENDER_WIDTH] > u16(depth) {
-            draw_pixel(colorbuffer, x, y, color)
-        }
-    }
-}
-
-draw_depthbuffer_pixel :: proc(depthbuffer: []u16, x, y, depth: int) {
-    if x > 0 && x < RENDER_WIDTH && y > 0 && y < RENDER_HEIGHT && depth > 0 {
-        depthbuffer[int(x + y * RENDER_WIDTH)] = u16(depth)
-    }
-}
-
-draw_line :: proc(colorbuffer: []u32, x0, y0, x1, y1: int, color: u32) {
+draw_line :: proc(colorbuffer: ^Colorbuffer, x0, y0, x1, y1: int, color: u32) {
     dx: f32 = f32(x1 - x0)
     dy: f32 = f32(y1 - y0)
     step := math.abs(dx) >= math.abs(dy) ? math.abs(dx) : math.abs(dy)
@@ -39,18 +53,37 @@ draw_line :: proc(colorbuffer: []u32, x0, y0, x1, y1: int, color: u32) {
     }
 }
 
-draw_img_at_depth :: proc(colorbuffer: []u32, depthbuffer: []u16, img: ^image.Image, x, y: int, depth: f32) {
-    scale := RENDER_WIDTH * 0.5 / depth
-    height := int(f32(img.height) * scale)
-    for i in 0 ..< int(f32(img.width) * scale) {
-        for j in 0 ..< height {
-            color := img_color_at(img, int(f32(i) / scale), int(f32(j) / scale))
-            draw_pixel_at_depth(colorbuffer, depthbuffer, x + i, y - height + j, int(depth), color)
+draw_depthbuffer_pixel :: proc(depthbuffer: ^Depthbuffer, x, y, depth: int) {
+    if x >= 0 && x < depthbuffer.width && y >= 0 && y < depthbuffer.height && depth > 0 {
+        depthbuffer.buf[x + y * depthbuffer.width] = u16(depth)
+    }
+}
+
+draw_pixel_at_depth :: proc(world_layer: ^World_Layer, x, y, depth: int, color: u32) {
+    if x >= 0 && x < world_layer.depthbuffer.width && y >= 0 && y < world_layer.depthbuffer.height && depth > 0 {
+        if world_layer.depthbuffer.buf[x + y * world_layer.depthbuffer.width] > u16(depth) {
+            draw_pixel(world_layer.colorbuffer, x, y, color)
         }
     }
 }
 
-draw_u128 :: proc(colorbuffer: []u32, bits: u128, x, y: int, color: u32) {
+draw_img_at_depth :: proc(world_layer: ^World_Layer, img: ^image.Image, x, y: int, depth: f32) {
+    if int(depth) > 0 {
+        scale := f32(world_layer.colorbuffer.width) * 0.5 / depth
+        width := int(f32(img.width) * scale)
+        height := int(f32(img.height) * scale)
+        for img_x in 0 ..< width {
+            img_pixel_x := int(f32(img_x) / scale)
+            for img_y in 0 ..< height {
+                // TODO: fix stuttering from the color lookup
+                color := img_color_at(img, img_pixel_x, int(f32(img_y) / scale))
+                draw_pixel_at_depth(world_layer, x + img_x, y - height + img_y, int(depth), color)
+            }
+        }
+    }
+}
+
+draw_u128 :: proc(colorbuffer: ^Colorbuffer, bits: u128, x, y: int, color: u32) {
     for i in 0 ..< 8 {
         for j in 0 ..< 16 {
             bit := u128(0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_0000000_00000000_00000000_00000000_000000000) >> u128(j+i*16)
@@ -61,7 +94,7 @@ draw_u128 :: proc(colorbuffer: []u32, bits: u128, x, y: int, color: u32) {
     }
 }
 
-draw_digit :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
+draw_digit :: proc(colorbuffer: ^Colorbuffer, n, x, y: int, color: u32) {
     bits := CHAR_0
     switch n {
     case 1: bits = CHAR_1
@@ -77,7 +110,7 @@ draw_digit :: proc(colorbuffer: []u32, n, x, y: int, color: u32) {
     draw_u128(colorbuffer, bits, x, y, color)
 }
 
-draw_rune :: proc(colorbuffer: []u32, letter: rune, x, y: int, color: u32) {
+draw_rune :: proc(colorbuffer: ^Colorbuffer, letter: rune, x, y: int, color: u32) {
     bits := CHAR_QUESTION
     switch letter {
     case '0': bits = CHAR_0
@@ -196,16 +229,26 @@ draw_rune :: proc(colorbuffer: []u32, letter: rune, x, y: int, color: u32) {
     draw_u128(colorbuffer, bits, x, y, color)
 }
 
-draw_int :: proc(colorbuffer: []u32, m, x, y: int, color: u32) {
-    for i, n := int_digits(m), m; n > 0;  {
-        draw_digit(colorbuffer[:], n%10, x+(i-1)*9, y, color)
+draw_ui_area :: proc(drawn_areas: ^Rects, x0, y0, width, height: int) {
+    if (drawn_areas.num < len(drawn_areas.rects)) {
+        drawn_areas.rects[drawn_areas.num] = Rect{x0, y0, width, height}
+        drawn_areas.num += 1
+    }
+}
+
+draw_int :: proc(ui_layer: ^Ui_Layer, m, x, y: int, color: u32) {
+    num_digits := int_digits(m)
+    draw_ui_area(ui_layer.drawn_areas, x, y, num_digits * CHAR_WIDTH,  CHAR_HEIGHT)
+    for i, n := num_digits, m; n > 0;  {
+        draw_digit(ui_layer.colorbuffer, n%10, x + (i-1) * CHAR_WIDTH, y, color)
         n /= 10
         i -= 1
     }
 }
 
-draw_string :: proc(colorbuffer: []u32, txt: string, x, y: int, color: u32) {
+draw_string :: proc(ui_layer: ^Ui_Layer, txt: string, x, y: int, color: u32) {
+    draw_ui_area(ui_layer.drawn_areas, x, y, len(txt) * CHAR_WIDTH,  CHAR_HEIGHT)
     for c, i in txt {
-        if c != ' ' { draw_rune(colorbuffer, c, x+i*9, y, color) }
+        if c != ' ' { draw_rune(ui_layer.colorbuffer, c, x + i * CHAR_WIDTH, y, color) }
     }
 }

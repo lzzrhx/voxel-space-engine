@@ -18,13 +18,14 @@ entity_destroy :: proc(entity: ^Entity) {
     image.destroy(entity.sprite)
 }
 
-entities_render :: proc(colorbuffer: []u32, depthbuffer: []u16, camera: ^Camera, terrain: ^Terrain, entities: ^[dynamic]Entity) {
+entities_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrain: ^Terrain, entities: ^[dynamic]Entity) {
     for entity in entities {
-        if f32(entity.x) >= camera.x + camera.plx && f32(entity.x) <= camera.x + camera.prx && f32(entity.y) <= camera.y && f32(entity.y) >= camera.y + camera.ply {
+        if f32(entity.x) > camera.x + camera.plx && f32(entity.x) < camera.x + camera.prx && f32(entity.y) < camera.y && f32(entity.y) > camera.y + camera.ply {
             depth := camera.y - f32(entity.y)
-            x := RENDER_WIDTH * 0.5 * (1 + (f32(entity.x) - camera.x) / depth)
-            z := int((camera.z - f32(terrain_height_at(terrain, entity.x, entity.y) + 1.0)) / depth * SCALE_FACTOR + camera.tilt)
-            draw_img_at_depth(colorbuffer, depthbuffer, entity.sprite, int(x), int(z), depth)
+            x := f32(world_layer.colorbuffer.width) * 0.5 * (1 + (f32(entity.x) - camera.x) / depth)
+            z := int((camera.z - f32(terrain_height_at(terrain, entity.x, entity.y) + 1.0)) / depth * TERRAIN_SCALE_FACTOR + camera.tilt)
+            draw_img_at_depth(world_layer, entity.sprite, int(x), int(z), depth)
         }
     }
 }
+
