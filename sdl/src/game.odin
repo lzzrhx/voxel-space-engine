@@ -125,6 +125,11 @@ draw :: proc(game: ^Game, fps: int) {
     entities_render(game.world_layer, game.camera, game.terrain, &game.entities)
     draw_int(game.ui_layer, fps, 1, 0, 0xff_00_ff_00)
     draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-16, 0xff_ff_ff_ff)
+    /*
+    for i := 0; i < game.world_layer.colorbuffer.width * game.world_layer.colorbuffer.height; i+=1 {
+        game.world_layer.colorbuffer.buf[i] = u32(f32(game.world_layer.depthbuffer.buf[i]) / 600.0 * 255.0)
+    }
+    */
     // Update buffer textures
     sdl2.UpdateTexture(
         game.ui_layer.colorbuffer.texture,

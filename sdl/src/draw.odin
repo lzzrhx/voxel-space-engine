@@ -11,7 +11,6 @@ Colorbuffer :: struct {
     texture: ^sdl2.Texture,
     width: int,
     height: int,
-    refresh: bool,
 }
 
 Depthbuffer :: struct {

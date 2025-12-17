@@ -32,11 +32,11 @@ main :: proc() {
         camera = &Camera{ x = 512, y = 512, z = 300, rot = math.PI * 1.5, tilt = -50, clip = 600 },
         terrain = &Terrain{},
         ui_layer = &Ui_Layer{
-            colorbuffer = &Colorbuffer{ refresh = true, buf = new([RENDER_WIDTH * RENDER_HEIGHT]u32)[:], width = RENDER_WIDTH, height = RENDER_HEIGHT },
+            colorbuffer = &Colorbuffer{ buf = new([RENDER_WIDTH * RENDER_HEIGHT]u32)[:], width = RENDER_WIDTH, height = RENDER_HEIGHT },
             drawn_areas = &Rects{ rects = new([MAX_DRAWS]Rect)[:] },
         },
         world_layer = &World_Layer{
-            colorbuffer = &Colorbuffer{ refresh = true, buf = new([WORLD_RENDER_WIDTH * WORLD_RENDER_HEIGHT]u32)[:], width = WORLD_RENDER_WIDTH, height = WORLD_RENDER_HEIGHT },
+            colorbuffer = &Colorbuffer{ buf = new([WORLD_RENDER_WIDTH * WORLD_RENDER_HEIGHT]u32)[:], width = WORLD_RENDER_WIDTH, height = WORLD_RENDER_HEIGHT },
             depthbuffer = &Depthbuffer{ buf = new([WORLD_RENDER_WIDTH * WORLD_RENDER_HEIGHT]u16)[:], width = WORLD_RENDER_WIDTH, height = WORLD_RENDER_HEIGHT },
         },
         entities = make([dynamic]Entity),
