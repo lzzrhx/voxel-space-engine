@@ -8,9 +8,9 @@ Terrain :: struct {
     height: ^[TERRAIN_SIZE * TERRAIN_SIZE]u8,
 }
 
-terrain_load :: proc(terrain: ^Terrain) {
-    color_img := img_load(COLORMAP_PATH)
-    height_img := img_load(HEIGHTMAP_PATH)
+terrain_load :: proc(terrain: ^Terrain, color_path, height_path: string) {
+    color_img := img_load(color_path)
+    height_img := img_load(height_path)
     defer image.destroy(color_img)
     defer image.destroy(height_img)
     terrain.color = new([TERRAIN_SIZE * TERRAIN_SIZE]u32)

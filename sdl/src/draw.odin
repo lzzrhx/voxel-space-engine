@@ -19,18 +19,6 @@ Depthbuffer :: struct {
     height: int,
 }
 
-Rect :: struct {
-    x: int,
-    y: int,
-    width: int,
-    height: int,
-}
-
-Rects :: struct {
-    rects: []Rect,
-    num: int,
-}
-
 draw_pixel :: proc(colorbuffer: ^Colorbuffer, x, y: int, color: u32) {
     if x >= 0 && x < colorbuffer.width && y >= 0 && y < colorbuffer.width {
         if (color != TRANSPARENT_COLOR) { colorbuffer.buf[int(x + y * colorbuffer.width)] = color }
@@ -237,7 +225,7 @@ draw_rune :: proc(colorbuffer: ^Colorbuffer, letter: rune, x, y: int, color: u32
     draw_u128(colorbuffer, bits, x, y, color)
 }
 
-draw_ui_area :: proc(drawn_areas: ^Rects, x0, y0, width, height: int) {
+draw_add_ui_drawn_area :: proc(drawn_areas: ^Rects, x0, y0, width, height: int) {
     if (drawn_areas.num < len(drawn_areas.rects)) {
         drawn_areas.rects[drawn_areas.num] = Rect{x0, y0, width, height}
         drawn_areas.num += 1
@@ -246,17 +234,17 @@ draw_ui_area :: proc(drawn_areas: ^Rects, x0, y0, width, height: int) {
 
 draw_int :: proc(ui_layer: ^Ui_Layer, m, x, y: int, color: u32) {
     num_digits := int_num_digits(m)
-    draw_ui_area(ui_layer.drawn_areas, x, y, num_digits * CHAR_WIDTH,  CHAR_HEIGHT)
+    draw_add_ui_drawn_area(ui_layer.drawn_areas, x, y, num_digits * (CHAR_WIDTH + CHAR_SPACING),  CHAR_HEIGHT)
     for i, n := num_digits, m; n > 0;  {
-        draw_digit(ui_layer.colorbuffer, n%10, x + (i-1) * CHAR_WIDTH, y, color)
+        draw_digit(ui_layer.colorbuffer, n%10, x + (i-1) * (CHAR_WIDTH + CHAR_SPACING), y, color)
         n /= 10
         i -= 1
     }
 }
 
 draw_string :: proc(ui_layer: ^Ui_Layer, txt: string, x, y: int, color: u32) {
-    draw_ui_area(ui_layer.drawn_areas, x, y, len(txt) * CHAR_WIDTH,  CHAR_HEIGHT)
+    draw_add_ui_drawn_area(ui_layer.drawn_areas, x, y, len(txt) * (CHAR_WIDTH + CHAR_SPACING),  CHAR_HEIGHT)
     for c, i in txt {
-        if c != ' ' { draw_rune(ui_layer.colorbuffer, c, x + i * CHAR_WIDTH, y, color) }
+        if c != ' ' { draw_rune(ui_layer.colorbuffer, c, x + i * (CHAR_WIDTH + CHAR_SPACING), y, color) }
     }
 }

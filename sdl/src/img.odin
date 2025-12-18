@@ -12,7 +12,7 @@ img_load :: proc(path: string) -> ^image.Image {
         log.errorf("Couldn't load %v.", path)
         os.exit(1)
     } else {
-        fmt.printf("Loaded image %v: %vx%vx%v, %v-bit.\n", path, img.width, img.height, img.channels, img.depth)
+        log.debugf("Loaded image %v: %vx%vx%v, %v-bit.", path, img.width, img.height, img.channels, img.depth)
     }
     return img
 }

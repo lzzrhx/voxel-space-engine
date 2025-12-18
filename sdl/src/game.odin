@@ -9,15 +9,21 @@ import "base:runtime"
 
 Game :: struct {
     running: bool,
-    camera: ^Camera,
-    terrain: ^Terrain,
     ui_layer: ^Ui_Layer,
     world_layer: ^World_Layer,
+    camera: ^Camera,
+    terrain: ^Terrain,
+    terrains: ^[9]Terrain,
     entities: [dynamic]Entity,
     window: ^sdl2.Window,
     renderer: ^sdl2.Renderer,
     render_texture: ^sdl2.Texture,
     keystate: [^]u8,
+    frame : u32,
+    time: u32,
+    prev_time: u32,
+    dt : f64,
+    fps : int,
 }
 
 Ui_Layer :: struct {
@@ -35,8 +41,19 @@ init :: proc(game: ^Game) {
         log.errorf("SDL initialization failed.")
         os.exit(1)
     }
-    terrain_load(game.terrain)
-    camera_update(game.camera)
+    terrain_load(&game.terrains[4], COLORMAP_PATH, HEIGHTMAP_PATH)
+    /*
+    terrain_load(&game.terrains[0], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[1], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[2], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[3], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[5], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[6], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[7], "./assets/uv.png", "./assets/black.png")
+    terrain_load(&game.terrains[8], "./assets/uv.png", "./assets/black.png")
+    */
+    game.terrain = &game.terrains[4]
+    camera_move(game.terrain, game.camera, 512, 512)
     entity_new(&game.entities, 530, 280)
     entity_new(&game.entities, 200, 300)
     entity_new(&game.entities, 800, 800)
@@ -102,9 +119,15 @@ input :: proc(game: ^Game) {
 }
 
 update :: proc(game: ^Game) {
+    game.time = sdl2.GetTicks()
+    game.dt = f64(game.time - game.prev_time)
+    if game.dt > 0.0 && game.frame % 30 == 0 { game.fps = int(1000.0 / game.dt) }
+    game.dt /= 1000.0
+    game.prev_time = game.time
+    game.frame += 1
 }
 
-draw :: proc(game: ^Game, fps: int) {
+draw :: proc(game: ^Game) {
     // Clear ui buffer
     if game.ui_layer.drawn_areas.num > 0 {
         for i in 0 ..< game.ui_layer.drawn_areas.num {
@@ -120,7 +143,7 @@ draw :: proc(game: ^Game, fps: int) {
     // Draw to buffers
     terrain_render(game.world_layer, game.camera, game.terrain)
     entities_render(game.world_layer, game.camera, game.terrain, &game.entities)
-    draw_int(game.ui_layer, fps, 1, 0, 0xff_00_ff_00)
+    draw_int(game.ui_layer, game.fps, 1, 0, 0xff_00_ff_00)
     draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT, 0xff_ff_ff_ff)
     draw_string(game.ui_layer, debug_txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT*2, 0xff_ff_ff_ff)
     // Add distant dithered fog to world layer
@@ -163,13 +186,16 @@ draw :: proc(game: ^Game, fps: int) {
 }
 
 exit :: proc(game: ^Game) {
+    defer delete(game.entities)
+    defer free(game.terrains)
     entities_destroy(&game.entities)
-    terrain_destroy(game.terrain)
+    for &terrain in game.terrains {
+        terrain_destroy(&terrain)
+    }
     delete(game.ui_layer.colorbuffer.buf)
     delete(game.ui_layer.drawn_areas.rects)
     delete(game.world_layer.colorbuffer.buf)
     delete(game.world_layer.depthbuffer.buf)
-    delete(game.entities)
     sdl2.DestroyWindow(game.window)
     sdl2.Quit()
 }
