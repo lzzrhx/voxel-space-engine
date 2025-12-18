@@ -23,13 +23,22 @@ TRANSPARENT_COLOR       :: 0xff00eb
 CHAR_WIDTH              :: 9
 CHAR_HEIGHT             :: 16
 MAX_DRAWS               :: 100
+SPRITE_SIZE             :: 16
+
+DITHER_0_0 :: 64
+DITHER_1_0 :: 128
+DITHER_0_1 :: 192
+DITHER_1_1 :: 0
+
+// Global string for showing debug info on screen
+debug_txt : string
 
 // Program entry-point
 main :: proc() {
     context.logger = log.create_console_logger()
     game := &Game{
         running = true,
-        camera = &Camera{ x = 512, y = 512, z = 300, rot = math.PI * 1.5, tilt = -50, clip = 600 },
+        camera = &Camera{ x = 512, y = 512, z = 300, rot = math.PI * 1.5, tilt = -50, clip = 700 },
         terrain = &Terrain{},
         ui_layer = &Ui_Layer{
             colorbuffer = &Colorbuffer{ buf = new([RENDER_WIDTH * RENDER_HEIGHT]u32)[:], width = RENDER_WIDTH, height = RENDER_HEIGHT },

@@ -118,18 +118,30 @@ draw :: proc(game: ^Game, fps: int) {
     // Clear world buffer
     for i := 0; i < game.world_layer.colorbuffer.width * game.world_layer.colorbuffer.height; i+=1 {
         game.world_layer.colorbuffer.buf[i] = 0x00_00_00_00
-        game.world_layer.depthbuffer.buf[i] = 0xff_ff
+        game.world_layer.depthbuffer.buf[i] = u16(game.camera.clip)
     }
     // Draw to buffers
     terrain_render(game.world_layer, game.camera, game.terrain)
     entities_render(game.world_layer, game.camera, game.terrain, &game.entities)
     draw_int(game.ui_layer, fps, 1, 0, 0xff_00_ff_00)
-    draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-16, 0xff_ff_ff_ff)
-    /*
-    for i := 0; i < game.world_layer.colorbuffer.width * game.world_layer.colorbuffer.height; i+=1 {
-        game.world_layer.colorbuffer.buf[i] = u32(f32(game.world_layer.depthbuffer.buf[i]) / 600.0 * 255.0)
+    draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT, 0xff_ff_ff_ff)
+    draw_string(game.ui_layer, debug_txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT*2, 0xff_ff_ff_ff)
+    // Add dithered fog to world_layer
+    for x in 0 ..< game.world_layer.colorbuffer.width {
+        for y in 0 ..< game.world_layer.colorbuffer.height {
+            i := x + y * game.world_layer.colorbuffer.width
+            dist := f32(game.world_layer.depthbuffer.buf[i]) / game.camera.clip
+            if dist > 0.8 {
+                single_ch := u32((dist - 0.8) * 5.0 * 192.0)
+                dither_val := u32(0)
+                if x % 2 == 0 && y % 2 == 0 { dither_val = DITHER_0_0 }
+                else if x % 2 == 1 && y % 2 == 0 { dither_val = DITHER_1_0 }
+                else if x % 2 == 0 && y % 2 == 1 { dither_val = DITHER_0_1 }
+                else if x % 2 == 1 && y % 2 == 1 { dither_val = DITHER_1_1 }
+                if single_ch > dither_val { game.world_layer.colorbuffer.buf[i] = 0}
+            }
+        }
     }
-    */
     // Update buffer textures
     sdl2.UpdateTexture(
         game.ui_layer.colorbuffer.texture,

@@ -71,12 +71,13 @@ draw_img_at_depth :: proc(world_layer: ^World_Layer, img: ^image.Image, x, y: in
         scale := f32(world_layer.colorbuffer.width) * 0.5 / depth
         width := int(f32(img.width) * scale)
         height := int(f32(img.height) * scale)
-        for img_x in 0 ..< width {
-            img_pixel_x := int(f32(img_x) / scale)
-            for img_y in 0 ..< height {
-                // TODO: fix stuttering from the color lookup
-                color := img_color_at(img, img_pixel_x, int(f32(img_y) / scale))
-                draw_pixel_at_depth(world_layer, x + img_x, y - height + img_y, int(depth), color)
+        if x > -width && x < world_layer.colorbuffer.width && y > 0 && y - height < world_layer.colorbuffer.height {
+            for img_x in 0 ..< width {
+                img_pixel_x := int(f32(img_x) / scale)
+                for img_y in 0 ..< height {
+                    color := img_color_at(img, img_pixel_x, int(f32(img_y) / scale))
+                    draw_pixel_at_depth(world_layer, x + img_x, y - height + img_y, int(depth), color)
+                }
             }
         }
     }

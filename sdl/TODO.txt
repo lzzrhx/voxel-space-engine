@@ -2,8 +2,9 @@
 // TODO:
 ///////////////////////////////////////////////////////////////////////////////
 
- - Change color arrays u32 -> u8
- - Fix stuttering when entity going in/out of frame
- - Add dithering
- - Add dithered fog in the distance
+ ? (better performance?) Change color arrays u32 -> u8
+ X Fix stuttering when entity going in/out of frame
  - Camera movement based on target position (with rotation)
+ X Add dithering
+ X Add dithered fog
+ ? Add grass
