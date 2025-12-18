@@ -62,13 +62,14 @@ draw_pixel_at_depth :: proc(world_layer: ^World_Layer, x, y, depth: int, color: 
     if x >= 0 && x < world_layer.depthbuffer.width && y >= 0 && y < world_layer.depthbuffer.height && depth > 0 {
         if world_layer.depthbuffer.buf[x + y * world_layer.depthbuffer.width] > u16(depth) {
             draw_pixel(world_layer.colorbuffer, x, y, color)
+            draw_depthbuffer_pixel(world_layer.depthbuffer, x, y, depth)
         }
     }
 }
 
-draw_img_at_depth :: proc(world_layer: ^World_Layer, img: ^image.Image, x, y: int, depth: f32) {
-    if int(depth) > 0 {
-        scale := f32(world_layer.colorbuffer.width) * 0.5 / depth
+draw_img_at_depth :: proc(world_layer: ^World_Layer, img: ^image.Image, x, y, depth: int) {
+    if depth > 0 {
+        scale := f32(world_layer.colorbuffer.width) * 0.5 / f32(depth)
         width := int(f32(img.width) * scale)
         height := int(f32(img.height) * scale)
         if x > -width && x < world_layer.colorbuffer.width && y > 0 && y - height < world_layer.colorbuffer.height {
@@ -76,10 +77,17 @@ draw_img_at_depth :: proc(world_layer: ^World_Layer, img: ^image.Image, x, y: in
                 img_pixel_x := int(f32(img_x) / scale)
                 for img_y in 0 ..< height {
                     color := img_color_at(img, img_pixel_x, int(f32(img_y) / scale))
-                    draw_pixel_at_depth(world_layer, x + img_x, y - height + img_y, int(depth), color)
+                    draw_pixel_at_depth(world_layer, x + img_x, y - height + img_y, depth, color)
                 }
             }
         }
+    }
+}
+
+draw_line_at_depth :: proc(world_layer: ^World_Layer, x, y_start, y_end, depth: int, color: u32) {
+    for y in y_start ..< y_end {
+        draw_pixel(world_layer.colorbuffer, x, y, color)
+        draw_depthbuffer_pixel(world_layer.depthbuffer, x, y, depth)
     }
 }
 

@@ -25,7 +25,7 @@ entities_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrain: ^Te
             depth := camera.y - f32(entity.y)
             x := int(f32(world_layer.colorbuffer.width) * 0.5 * (1 + (f32(entity.x) - camera.x) / depth))
             y := int((camera.z - f32(terrain_height_at(terrain, entity.x, entity.y) + 1.0)) / depth * TERRAIN_SCALE_FACTOR + camera.tilt)
-            draw_img_at_depth(world_layer, entity.sprite, x, y, depth)
+            draw_img_at_depth(world_layer, entity.sprite, x, y, int(depth))
         }
     }
 }

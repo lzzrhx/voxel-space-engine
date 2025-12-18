@@ -7,7 +7,7 @@ import "core:log"
 import "core:os"
 
 img_load :: proc(path: string) -> ^image.Image {
-    img,img_err := image.load(path, image.Options{.return_metadata})
+    img,img_err := image.load(path, image.Options{.return_metadata, .alpha_drop_if_present})
     if img_err != nil {
         log.errorf("Couldn't load %v.", path)
         os.exit(1)

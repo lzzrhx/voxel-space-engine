@@ -38,6 +38,8 @@ init :: proc(game: ^Game) {
     terrain_load(game.terrain)
     camera_update(game.camera)
     entity_new(&game.entities, 530, 280)
+    entity_new(&game.entities, 200, 300)
+    entity_new(&game.entities, 800, 800)
 }
 
 init_sdl :: proc(game: ^Game) -> bool {
@@ -115,11 +117,6 @@ draw :: proc(game: ^Game, fps: int) {
         }
         game.ui_layer.drawn_areas.num = 0
     }
-    // Clear world buffer
-    for i := 0; i < game.world_layer.colorbuffer.width * game.world_layer.colorbuffer.height; i+=1 {
-        game.world_layer.colorbuffer.buf[i] = 0x00_00_00_00
-        game.world_layer.depthbuffer.buf[i] = u16(game.camera.clip)
-    }
     // Draw to buffers
     terrain_render(game.world_layer, game.camera, game.terrain)
     entities_render(game.world_layer, game.camera, game.terrain, &game.entities)
@@ -127,18 +124,17 @@ draw :: proc(game: ^Game, fps: int) {
     draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT, 0xff_ff_ff_ff)
     draw_string(game.ui_layer, debug_txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT*2, 0xff_ff_ff_ff)
     // Add distant dithered fog to world layer
-    for x in 0 ..< game.world_layer.colorbuffer.width {
-        for y in 0 ..< game.world_layer.colorbuffer.height {
-            i := x + y * game.world_layer.colorbuffer.width
-            dist := f32(game.world_layer.depthbuffer.buf[i]) / game.camera.clip
-            if dist > 0.8 {
-                single_ch := u32((dist - 0.8) * 5.0 * DITHER_2_MAX)
-                dither_val := u32(0)
+    if game.camera.fog_end > 0 {
+        for x in 0 ..< game.world_layer.colorbuffer.width {
+            for y in game.camera.fog_start ..< game.camera.fog_end {
+                i := x + y * game.world_layer.colorbuffer.width
+                dist := int((f32(game.world_layer.depthbuffer.buf[i]) - CAM_FOG_START) / (CAM_CLIP - CAM_FOG_START) * DITHER_2_MAX)
+                dither_val := 0
                 if x % 2 == 0 && y % 2 == 0 { dither_val = DITHER_2_0_0 }
                 else if x % 2 == 1 && y % 2 == 0 { dither_val = DITHER_2_1_0 }
                 else if x % 2 == 0 && y % 2 == 1 { dither_val = DITHER_2_0_1 }
                 else if x % 2 == 1 && y % 2 == 1 { dither_val = DITHER_2_1_1 }
-                if single_ch > dither_val { game.world_layer.colorbuffer.buf[i] = 0}
+                if dist > dither_val { game.world_layer.colorbuffer.buf[i] = 0 }
             }
         }
     }
@@ -177,4 +173,3 @@ exit :: proc(game: ^Game) {
     sdl2.DestroyWindow(game.window)
     sdl2.Quit()
 }
-

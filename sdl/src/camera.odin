@@ -9,12 +9,23 @@ Camera :: struct {
     z: f32,
     rot: f32,
     tilt: f32,
-    clip: f32,
     plx: f32,
     ply: f32,
     prx: f32,
     pry: f32,
+    fog_start: int,
+    fog_end: int,
     txt: string,
+}
+
+camera_update :: proc(camera: ^Camera) {
+    sin := math.sin_f32(camera.rot)
+    cos := math.cos_f32(camera.rot)
+    camera.plx = cos * CAM_CLIP + sin * CAM_CLIP
+    camera.ply = sin * CAM_CLIP - cos * CAM_CLIP
+    camera.prx = cos * CAM_CLIP - sin * CAM_CLIP
+    camera.pry = sin * CAM_CLIP + cos * CAM_CLIP
+    camera.txt = fmt.tprintf("camera: x=%v y=%v z=%v tilt=%v", camera.x, camera.y, camera.z, camera.tilt)
 }
 
 camera_move :: proc(terrain: ^Terrain, camera: ^Camera, x, y: f32) {
@@ -31,14 +42,4 @@ camera_change_height :: proc(terrain: ^Terrain, camera: ^Camera, z: f32) {
         camera.tilt += f32(z) * -0.5
         camera_update(camera)
     }
-}
-
-camera_update :: proc(camera: ^Camera) {
-    sin := math.sin_f32(camera.rot)
-    cos := math.cos_f32(camera.rot)
-    camera.plx = cos * camera.clip + sin * camera.clip
-    camera.ply = sin * camera.clip - cos * camera.clip
-    camera.prx = cos * camera.clip - sin * camera.clip
-    camera.pry = sin * camera.clip + cos * camera.clip
-    camera.txt = fmt.tprintf("camera: x=%v y=%v z=%v tilt=%v", camera.x, camera.y, camera.z, camera.tilt)
 }

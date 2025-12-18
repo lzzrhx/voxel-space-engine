@@ -3,6 +3,9 @@ package main
 import "core:log"
 import "core:math"
 import "vendor:sdl2"
+import "core:mem"
+import "core:fmt"
+import "core:c/libc"
 
 // Constants
 WINDOW_TITLE            :: "Voxel"
@@ -16,6 +19,8 @@ WINDOW_FLAGS            :: sdl2.WindowFlags{.SHOWN}
 TERRAIN_SIZE            :: 1024
 TERRAIN_SCALE_FACTOR    :: 100.0
 CAM_SPEED               :: 5.0
+CAM_CLIP                :: 700
+CAM_FOG_START           :: 500
 COLORMAP_PATH           :: "./terrain/color.png"
 HEIGHTMAP_PATH          :: "./terrain/height.png"
 PLAYER_SPRITE           :: "./guy.png"
@@ -25,16 +30,32 @@ CHAR_HEIGHT             :: 16
 MAX_DRAWS               :: 100
 SPRITE_SIZE             :: 16
 
-
 // Global string for showing debug info on screen
 debug_txt : string
+
+reset_tracking_allocator :: proc(a: ^mem.Tracking_Allocator) -> bool {
+    err := false
+    for _, value in a.allocation_map {
+        fmt.printf("%v: Leaked %v bytes\n", value.location, value.size)
+        err = true
+    }
+    mem.tracking_allocator_clear(a)
+    return err
+}
 
 // Program entry-point
 main :: proc() {
     context.logger = log.create_console_logger()
+    // Tracking allocator set up
+    default_allocator := context.allocator
+    tracking_allocator: mem.Tracking_Allocator
+    mem.tracking_allocator_init(&tracking_allocator, default_allocator)
+    context.allocator = mem.tracking_allocator(&tracking_allocator)
+    defer reset_tracking_allocator(&tracking_allocator)
+    // Game set up
     game := &Game{
         running = true,
-        camera = &Camera{ x = 512, y = 512, z = 300, rot = math.PI * 1.5, tilt = -50, clip = 700 },
+        camera = &Camera{ x = 512, y = 512, z = 300, rot = math.PI * 1.5, tilt = -50 },
         terrain = &Terrain{},
         ui_layer = &Ui_Layer{
             colorbuffer = &Colorbuffer{ buf = new([RENDER_WIDTH * RENDER_HEIGHT]u32)[:], width = RENDER_WIDTH, height = RENDER_HEIGHT },
@@ -63,5 +84,12 @@ main :: proc() {
         input(game)
         update(game)
         draw(game, fps)
+        if len(tracking_allocator.bad_free_array) > 0 {
+            for b in tracking_allocator.bad_free_array {
+                log.errorf("Bad free at: %v", b.location)
+            }
+            libc.getchar()
+            panic("Bad free detected.")
+        }
     }
 }
