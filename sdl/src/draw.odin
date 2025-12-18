@@ -237,7 +237,7 @@ draw_ui_area :: proc(drawn_areas: ^Rects, x0, y0, width, height: int) {
 }
 
 draw_int :: proc(ui_layer: ^Ui_Layer, m, x, y: int, color: u32) {
-    num_digits := int_digits(m)
+    num_digits := int_num_digits(m)
     draw_ui_area(ui_layer.drawn_areas, x, y, num_digits * CHAR_WIDTH,  CHAR_HEIGHT)
     for i, n := num_digits, m; n > 0;  {
         draw_digit(ui_layer.colorbuffer, n%10, x + (i-1) * CHAR_WIDTH, y, color)

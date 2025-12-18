@@ -11,7 +11,7 @@ Entity :: struct {
 }
 
 entity_new :: proc(entities: ^[dynamic]Entity, x, y: int) {
-    img := img_load(PLAYER_SPRITE)
+    img := img_load("./guy.png")
     append(entities, Entity{x = x, y = y, sprite = img})
 }
 
@@ -30,3 +30,8 @@ entities_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrain: ^Te
     }
 }
 
+entities_destroy :: proc(entities: ^[dynamic]Entity) {
+    for &entity in entities {
+        entity_destroy(&entity)
+    }
+}

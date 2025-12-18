@@ -65,3 +65,18 @@ convert_png_to_bits :: proc() {
     for i := 0; i < RENDER_HEIGHT * RENDER_WIDTH; i+=1 {
         if f32(game.depthbuffer[i]) / f32(game.camera.clip) > 0.5 { color_set_brightness(&game.colorbuffer[i], 2.0 - f32(game.depthbuffer[i]) / f32(game.camera.clip) * 2) }
     }*/
+
+/*
+color_set_brightness :: proc(color: ^u32, brightness: f32) {
+    r := f32(f32(color^ & u32(0x00_00_00_FF)) * brightness)
+    if r < 0.0 { r = 0.0 }
+    else if r > 255.0 { r = 255.0}
+    g := f32(f32((color^ & u32(0x00_00_FF_00)) >> 8) * brightness)
+    if g < 0.0 { g = 0.0 }
+    else if g > 255.0 { g = 255.0}
+    b := f32(f32((color^ & u32(0x00_FF_00_00)) >> 16) * brightness)
+    if b < 0.0 { b = 0.0 }
+    else if b > 255.0 { b = 255.0}
+    color^ = u32(r) | (u32(g) << 8) | (u32(b) << 16)
+}
+*/

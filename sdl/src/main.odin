@@ -25,10 +25,6 @@ CHAR_HEIGHT             :: 16
 MAX_DRAWS               :: 100
 SPRITE_SIZE             :: 16
 
-DITHER_0_0 :: 64
-DITHER_1_0 :: 128
-DITHER_0_1 :: 192
-DITHER_1_1 :: 0
 
 // Global string for showing debug info on screen
 debug_txt : string

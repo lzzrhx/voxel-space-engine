@@ -9,15 +9,15 @@ import "base:runtime"
 
 Game :: struct {
     running: bool,
+    camera: ^Camera,
+    terrain: ^Terrain,
+    ui_layer: ^Ui_Layer,
+    world_layer: ^World_Layer,
+    entities: [dynamic]Entity,
     window: ^sdl2.Window,
     renderer: ^sdl2.Renderer,
     render_texture: ^sdl2.Texture,
-    ui_layer: ^Ui_Layer,
-    world_layer: ^World_Layer,
-    camera: ^Camera,
-    terrain: ^Terrain,
     keystate: [^]u8,
-    entities: [dynamic]Entity,
 }
 
 Ui_Layer :: struct {
@@ -103,8 +103,8 @@ update :: proc(game: ^Game) {
 }
 
 draw :: proc(game: ^Game, fps: int) {
+    // Clear ui buffer
     if game.ui_layer.drawn_areas.num > 0 {
-        // Clear ui buffer
         for i in 0 ..< game.ui_layer.drawn_areas.num {
             area := game.ui_layer.drawn_areas.rects[i]
             for x in area.x ..< area.x + area.width {
@@ -126,18 +126,18 @@ draw :: proc(game: ^Game, fps: int) {
     draw_int(game.ui_layer, fps, 1, 0, 0xff_00_ff_00)
     draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT, 0xff_ff_ff_ff)
     draw_string(game.ui_layer, debug_txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT*2, 0xff_ff_ff_ff)
-    // Add dithered fog to world_layer
+    // Add distant dithered fog to world layer
     for x in 0 ..< game.world_layer.colorbuffer.width {
         for y in 0 ..< game.world_layer.colorbuffer.height {
             i := x + y * game.world_layer.colorbuffer.width
             dist := f32(game.world_layer.depthbuffer.buf[i]) / game.camera.clip
             if dist > 0.8 {
-                single_ch := u32((dist - 0.8) * 5.0 * 192.0)
+                single_ch := u32((dist - 0.8) * 5.0 * DITHER_2_MAX)
                 dither_val := u32(0)
-                if x % 2 == 0 && y % 2 == 0 { dither_val = DITHER_0_0 }
-                else if x % 2 == 1 && y % 2 == 0 { dither_val = DITHER_1_0 }
-                else if x % 2 == 0 && y % 2 == 1 { dither_val = DITHER_0_1 }
-                else if x % 2 == 1 && y % 2 == 1 { dither_val = DITHER_1_1 }
+                if x % 2 == 0 && y % 2 == 0 { dither_val = DITHER_2_0_0 }
+                else if x % 2 == 1 && y % 2 == 0 { dither_val = DITHER_2_1_0 }
+                else if x % 2 == 0 && y % 2 == 1 { dither_val = DITHER_2_0_1 }
+                else if x % 2 == 1 && y % 2 == 1 { dither_val = DITHER_2_1_1 }
                 if single_ch > dither_val { game.world_layer.colorbuffer.buf[i] = 0}
             }
         }
@@ -167,9 +167,7 @@ draw :: proc(game: ^Game, fps: int) {
 }
 
 exit :: proc(game: ^Game) {
-    for &entity in game.entities {
-        entity_destroy(&entity)
-    }
+    entities_destroy(&game.entities)
     terrain_destroy(game.terrain)
     delete(game.ui_layer.colorbuffer.buf)
     delete(game.ui_layer.drawn_areas.rects)
