@@ -13,7 +13,7 @@ Game :: struct {
     world_layer: ^World_Layer,
     camera: ^Camera,
     terrain: ^Terrain,
-    terrains: ^[9]Terrain,
+    //terrains: ^[9]Terrain,
     entities: [dynamic]Entity,
     window: ^sdl2.Window,
     renderer: ^sdl2.Renderer,
@@ -41,7 +41,6 @@ init :: proc(game: ^Game) {
         log.errorf("SDL initialization failed.")
         os.exit(1)
     }
-    terrain_load(&game.terrains[4], COLORMAP_PATH, HEIGHTMAP_PATH)
     /*
     terrain_load(&game.terrains[0], "./assets/uv.png", "./assets/black.png")
     terrain_load(&game.terrains[1], "./assets/uv.png", "./assets/black.png")
@@ -51,8 +50,10 @@ init :: proc(game: ^Game) {
     terrain_load(&game.terrains[6], "./assets/uv.png", "./assets/black.png")
     terrain_load(&game.terrains[7], "./assets/uv.png", "./assets/black.png")
     terrain_load(&game.terrains[8], "./assets/uv.png", "./assets/black.png")
-    */
+    terrain_load(&game.terrains[4], COLORMAP_PATH, HEIGHTMAP_PATH)
     game.terrain = &game.terrains[4]
+    */
+    terrain_load(game.terrain, COLORMAP_PATH, HEIGHTMAP_PATH)
     camera_move(game.terrain, game.camera, 512, 512)
     entity_new(&game.entities, 530, 280)
     entity_new(&game.entities, 200, 300)
@@ -186,12 +187,13 @@ draw :: proc(game: ^Game) {
 }
 
 exit :: proc(game: ^Game) {
+    terrain_destroy(game.terrain)
+    //defer free(game.terrains)
+    //for &terrain in game.terrains {
+    //    terrain_destroy(&terrain)
+    //}
     defer delete(game.entities)
-    defer free(game.terrains)
     entities_destroy(&game.entities)
-    for &terrain in game.terrains {
-        terrain_destroy(&terrain)
-    }
     delete(game.ui_layer.colorbuffer.buf)
     delete(game.ui_layer.drawn_areas.rects)
     delete(game.world_layer.colorbuffer.buf)
