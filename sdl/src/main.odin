@@ -20,8 +20,8 @@ TERRAIN_SCALE_FACTOR    :: 100.0
 CAM_SPEED               :: 5.0
 CAM_CLIP                :: 700
 CAM_FOG_START           :: 500
-COLORMAP_PATH           :: "./assets/terrain/color.png"
-HEIGHTMAP_PATH          :: "./assets/terrain/height.png"
+COLORMAP_PATH           :: "./assets/color.png"
+HEIGHTMAP_PATH          :: "./assets/height.png"
 TRANSPARENT_COLOR       :: 0xff00eb
 SPRITE_SIZE             :: 16
 UI_MAX_DRAWS            :: 100
