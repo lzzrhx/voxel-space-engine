@@ -50,7 +50,7 @@ main :: proc() {
         },
         camera = &Camera{ z = 300, rot = math.PI * 1.5, tilt = -50 },
         terrain = &Terrain{},
-        //terrains = new([9]Terrain),
+        terrains = new([9]Terrain),
         entities = make([dynamic]Entity),
     }
     init(game)

@@ -13,7 +13,7 @@ Game :: struct {
     world_layer: ^World_Layer,
     camera: ^Camera,
     terrain: ^Terrain,
-    //terrains: ^[9]Terrain,
+    terrains: ^[9]Terrain,
     entities: [dynamic]Entity,
     window: ^sdl2.Window,
     renderer: ^sdl2.Renderer,
@@ -41,19 +41,19 @@ init :: proc(game: ^Game) {
         log.errorf("SDL initialization failed.")
         os.exit(1)
     }
-    /*
+    
     terrain_load(&game.terrains[0], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[1], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[2], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[3], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[5], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[6], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[7], "./assets/uv.png", "./assets/black.png")
-    terrain_load(&game.terrains[8], "./assets/uv.png", "./assets/black.png")
     terrain_load(&game.terrains[4], COLORMAP_PATH, HEIGHTMAP_PATH)
+    game.terrains[1] = game.terrains[0]
+    game.terrains[2] = game.terrains[0]
+    game.terrains[3] = game.terrains[0]
+    game.terrains[5] = game.terrains[0]
+    game.terrains[6] = game.terrains[0]
+    game.terrains[7] = game.terrains[0]
+    game.terrains[8] = game.terrains[0]
     game.terrain = &game.terrains[4]
-    */
-    terrain_load(game.terrain, COLORMAP_PATH, HEIGHTMAP_PATH)
+    
+    //terrain_load(game.terrain, COLORMAP_PATH, HEIGHTMAP_PATH)
     camera_move(game.terrain, game.camera, 512, 512)
     entity_new(&game.entities, 530, 280)
     entity_new(&game.entities, 200, 300)
@@ -142,7 +142,7 @@ draw :: proc(game: ^Game) {
         game.ui_layer.drawn_areas.num = 0
     }
     // Draw to buffers
-    terrain_render(game.world_layer, game.camera, game.terrain)
+    terrain_render(game.world_layer, game.camera, game.terrains)
     entities_render(game.world_layer, game.camera, game.terrain, &game.entities)
     draw_int(game.ui_layer, game.fps, 1, 0, 0xff_00_ff_00)
     draw_string(game.ui_layer, game.camera.txt, 1, game.ui_layer.colorbuffer.height-CHAR_HEIGHT, 0xff_ff_ff_ff)
@@ -187,10 +187,11 @@ draw :: proc(game: ^Game) {
 }
 
 exit :: proc(game: ^Game) {
-    terrain_destroy(game.terrain)
-    //defer free(game.terrains)
+    terrain_destroy(&game.terrains[0])
+    terrain_destroy(&game.terrains[4])
+    defer free(game.terrains)
     //for &terrain in game.terrains {
-    //    terrain_destroy(&terrain)
+    //    if &terrain != nil { terrain_destroy(&terrain) }
     //}
     defer delete(game.entities)
     entities_destroy(&game.entities)

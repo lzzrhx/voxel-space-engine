@@ -27,7 +27,7 @@ terrain_destroy :: proc(terrain: ^Terrain) {
 }
 
 terrain_height_at_i :: proc(terrain: ^Terrain, i: int) -> u8 {
-    if i < len(terrain.height) {
+    if i >= 0 && i < TERRAIN_SIZE * TERRAIN_SIZE {
         return terrain.height[i]
     }
     return 0
@@ -37,7 +37,7 @@ terrain_height_at :: proc(terrain: ^Terrain, x, y: int) -> u8 {
     return terrain_height_at_i(terrain, x + y * TERRAIN_SIZE)
 }
 
-terrain_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrain: ^Terrain) {
+terrain_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrains: ^[9]Terrain) {
     camera.fog_start = world_layer.colorbuffer.height
     camera.fog_end = 0
     for x in 0 ..< world_layer.colorbuffer.width {
@@ -47,20 +47,60 @@ terrain_render :: proc(world_layer: ^World_Layer, camera: ^Camera, terrain: ^Ter
         ry := camera.y
         irx : int
         iry : int
+        tx : int
+        ty : int
         z : int
         i : int
         first := true
         max_z := world_layer.colorbuffer.height
-        for depth in 1 ..< int(CAM_CLIP) {
+        terrain : ^Terrain
+        for depth in 0 ..< int(CAM_CLIP) {
             rx += dx
             ry += dy
             irx = int(rx)
             iry = int(ry)
+            terrain = &terrains[4]
+            if irx < 0 || irx > TERRAIN_SIZE || iry < 0 || iry > TERRAIN_SIZE {
+                if irx < 0 {
+                    irx += TERRAIN_SIZE
+                    if iry < 0 && &terrains[6] != nil {
+                        terrain = &terrains[6]
+                        iry += TERRAIN_SIZE
+                    }
+                    else if iry > TERRAIN_SIZE && &terrains[0] != nil {
+                        terrain = &terrains[0]
+                        iry -= TERRAIN_SIZE
+                    }
+                    else if &terrains[3] != nil {
+                        terrain = &terrains[3]
+                    }
+                    else { continue }
+                } else if irx > TERRAIN_SIZE {
+                    irx -= TERRAIN_SIZE
+                    if iry < 0 && &terrains[8] != nil {
+                        terrain = &terrains[8]
+                        iry += TERRAIN_SIZE
+                    }
+                    else if iry > TERRAIN_SIZE && &terrains[2] != nil {
+                        terrain = &terrains[2]
+                        iry -= TERRAIN_SIZE
+                    }
+                    else if &terrains[5] != nil { terrain = &terrains[5] }
+                    else { continue }
+                } else if iry < 0 {
+                    iry += TERRAIN_SIZE
+                    if &terrains[7] != nil { terrain = &terrains[7] }
+                    else { continue }
+                } else {
+                    iry -= TERRAIN_SIZE
+                    if &terrains[1] != nil { terrain = &terrains[1] }
+                    else { continue }
+                }
+            }
             if irx < 0 || irx > TERRAIN_SIZE-1 || iry < 0 || iry > TERRAIN_SIZE-1 { continue }
             i = irx + iry * TERRAIN_SIZE
             z = int((camera.z - f32(terrain.height[i])) / f32(depth) * TERRAIN_SCALE_FACTOR + camera.tilt)
-            if z < 0 { z = 0 }
-            else if z > world_layer.colorbuffer.height { z = world_layer.colorbuffer.height }
+            if z < 0 || z > world_layer.colorbuffer.height { continue }
             if z < max_z {
                 if max_z == world_layer.colorbuffer.height && (iry == TERRAIN_SIZE-1 || irx == 0 || irx == TERRAIN_SIZE-1) {
                     draw_line_at_depth(world_layer, x, z+1, max_z, int(CAM_CLIP), 0x00_00_00_00)

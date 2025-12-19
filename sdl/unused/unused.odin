@@ -74,3 +74,51 @@ color_set_brightness :: proc(color: ^u32, brightness: f32) {
     else if b > 255.0 { b = 255.0}
     color^ = u32(r) | (u32(g) << 8) | (u32(b) << 16)
 }
+/*
+terrain_at :: proc(x, y: int) -> int {
+    if x < 0 {
+        if y < 0 { return 6}
+        else if y > TERRAIN_SIZE { return 0}
+        else { return 3 }
+    } else if x > TERRAIN_SIZE {
+        if y < 0 { return 8 }
+        else if y > TERRAIN_SIZE { return 2 }
+        else { return 5 }
+    } else if y < 0 {
+        return 7
+    }
+    return 1
+}
+*/
+/*
+terrain_at :: proc(x, y: ^int) -> int {
+    if x^ < 0 {
+        x^ += TERRAIN_SIZE
+        if y^ < 0 {
+            y^ += TERRAIN_SIZE
+            return 6
+        }
+        else if y^ > TERRAIN_SIZE {
+            y^ -= TERRAIN_SIZE
+            return 0
+        }
+        return 3
+    } else if x^ > TERRAIN_SIZE {
+        x^ -= TERRAIN_SIZE
+        if y^ < 0 {
+            y^ += TERRAIN_SIZE
+            return 8
+        }
+        else if y^ > TERRAIN_SIZE {
+            y^ -= TERRAIN_SIZE
+            return 2
+        }
+        return 5
+    } else if y^ < 0 {
+        y^ += TERRAIN_SIZE
+        return 7
+    }
+    y^ -= TERRAIN_SIZE
+    return 1
+}
+*/
