@@ -5,4 +5,3 @@
  - Camera movement based on target position (orbit camera)
  - Add character movement
  - Add neighbouring areas (3x3)
- ? Add grass
