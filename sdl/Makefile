@@ -1,4 +1,6 @@
-Run:
+run:
 	odin run ./src/.
-Clean:
+build:
+	odin build ./src/.
+clean:
 	find . -type f ! -name "*.?*" -delete

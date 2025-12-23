@@ -2,6 +2,17 @@
 // TODO:
 ///////////////////////////////////////////////////////////////////////////////
 
- - Camera movement based on target position (orbit camera)
- - Add character movement
- - Add neighbouring areas (3x3)
+ - Add collection of entities and terrains to load from
+ - Auto load new terrains when player changes active terrain
+ ? Add OpenGL for 3D rendering
+ ? 3D: Add world grid
+ ? 3D: Add 3D rendered entities
+ ? Add dithered fade under terrain
+ ? Add skyline
+ ? Add grass
+
+///////////////////////////////////////////////////////////////////////////////
+// PLAN:
+///////////////////////////////////////////////////////////////////////////////
+
+ - World size: 100x100 terrains (500kb * 100 * 100 = ~5gb)

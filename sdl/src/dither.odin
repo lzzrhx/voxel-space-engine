@@ -1,0 +1,27 @@
+package main
+
+// 2x2 dither pattern
+DITHER_2_0_0 :: 0*64
+DITHER_2_1_0 :: 2*64
+DITHER_2_0_1 :: 3*64
+DITHER_2_1_1 :: 1*64
+DITHER_2_MAX :: 3*64
+
+// 4x4 dither pattern
+DITHER_4_0_0 ::  0*16
+DITHER_4_1_0 ::  8*16
+DITHER_4_2_0 ::  2*16
+DITHER_4_3_0 :: 10*16
+DITHER_4_0_1 :: 12*16
+DITHER_4_1_1 ::  4*16
+DITHER_4_2_1 :: 14*16
+DITHER_4_3_1 ::  6*16
+DITHER_4_0_2 ::  3*16
+DITHER_4_1_2 :: 11*16
+DITHER_4_2_2 ::  1*16
+DITHER_4_3_2 ::  9*16
+DITHER_4_0_3 :: 15*16
+DITHER_4_1_3 ::  7*16
+DITHER_4_2_3 :: 14*16
+DITHER_4_3_3 ::  5*16
+DITHER_4_MAX :: 15*16
