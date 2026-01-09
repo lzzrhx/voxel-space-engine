@@ -76,8 +76,8 @@ int main(int argc, char* args[]) {
     uint8_t palette[256 * 3];
     int pal_count;
 
-    colormap = loadgif("maps/map3.color.gif", NULL, NULL, &pal_count, palette);
-    heightmap  = loadgif("maps/map3.height.gif", NULL, NULL, NULL, NULL);
+    colormap = loadgif("assets/color.gif", NULL, NULL, &pal_count, palette);
+    heightmap  = loadgif("assets/height.gif", NULL, NULL, NULL, NULL);
 
 
     for (int i = 0; i < pal_count; i++) {
