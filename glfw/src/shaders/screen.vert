@@ -6,7 +6,7 @@ vec4 coords[3] = vec4[3](
     vec4(-1.0,  3.0, 0.0, 3.0)
 );
 
-// Outs
+// Out
 out vec2 vs_tex_coords;
 
 void main() {

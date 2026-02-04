@@ -1,21 +1,17 @@
 #version 430 core
 
+// In
 layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
 
-// Uniforms
-layout(rgba32f, binding = 0) uniform image2D img_output;
+// Uniform
+layout(rgba32f, binding = 0) uniform image2D render_texture;
 uniform uint width;
 uniform uint height;
-
-// num dispatched: gl_NumWorkGroups
-// gl_GlobalInvocationID = gl_WorkGroupId * gl_WorkGroupSize + gl_LocalInvocationID
-// uint width = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 
 void main() {
     float x = gl_GlobalInvocationID.x;
     for (int y = 0; y < height; y++) {
-        ivec2 texel_coord = ivec2(x, y);
-        vec3 color = vec3(texel_coord.yxy) / width;
-        imageStore(img_output, texel_coord, vec4(color, 1.0));
+        vec3 color = vec3(ivec2(x, y).yxy) / width;
+        imageStore(render_texture, ivec2(x, y), vec4(color, 1.0));
     }
 }

@@ -1,15 +1,15 @@
 #version 330 core
 
-// Uniforms
-uniform sampler2D render_texture;
-
-// Ins
+// In
 in vec2 vs_tex_coords;
 
-// Outs
-out vec4 frag_color;
+// Uniform
+uniform sampler2D render_texture;
+
+// Out
+out vec4 out_frag_color;
 
 void main()
 {          
-    frag_color = vec4(texture(render_texture, vs_tex_coords).rgb, 1.0);
+    out_frag_color = vec4(texture(render_texture, vs_tex_coords).rgb, 1.0);
 }
