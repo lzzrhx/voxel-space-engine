@@ -1,5 +1,4 @@
 package main
-
 import "core:fmt"
 import "core:strings"
 import "core:os"
@@ -9,9 +8,9 @@ import "vendor:glfw"
 import "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
+
 Game :: struct {
     window:         glfw.WindowHandle,
-    render_texture: u32,
     sp_compute:     u32,
     sp_screen:      u32,
     sp_font:        u32,
@@ -22,9 +21,20 @@ Game :: struct {
     prev_time:      f64,
     dt:             f64,
     fps:            u32,
-    font_texture:   u32,
+    texture_render: u32,
+    texture_font:   u32,
+    texture_terrain_color:   u32,
+    texture_terrain_height:   u32,
     ndc_pixel_w:    f32,
     ndc_pixel_h:    f32,
+    camera:         ^Camera,
+}
+
+
+gl_check_error :: proc(location := #caller_location) {
+    if err := gl.GetError(); err != gl.NO_ERROR {
+        log.errorf("OpenGL error! %s", gl.GL_Enum(err), location = location)
+    }
 }
 
 
@@ -56,51 +66,49 @@ game_init :: proc(game: ^Game) {
     if OPTION_ANTI_ALIAS { gl.Enable(gl.MULTISAMPLE) }
 
     // Load shaders
-    ok : bool
-    game.sp_screen, ok = gl.load_shaders_file(SHADER_SCREEN_VERT, SHADER_SCREEN_FRAG)
-    if !ok {
-        log.errorf("Shader loading failed (%s %s).", SHADER_SCREEN_VERT, SHADER_SCREEN_FRAG)
-        os.exit(1)
-    }
-    game.sp_font, ok = gl.load_shaders_file(SHADER_FONT_VERT, SHADER_FONT_FRAG)
-    if !ok {
-        log.errorf("Shader loading failed. (%s %s)", SHADER_FONT_VERT, SHADER_FONT_FRAG)
-        os.exit(1)
-    }
-    game.sp_compute, ok = gl.load_compute_file(SHADER_COMPUTE)
-    if !ok {
-        log.errorf("Shader loading failed (%s).", SHADER_COMPUTE)
-        os.exit(1)
-    }
+    shader_load_vs_fs(&game.sp_font, SHADER_FONT_VERT, SHADER_FONT_FRAG)
+    shader_load_vs_fs(&game.sp_screen, SHADER_SCREEN_VERT, SHADER_SCREEN_FRAG)
+    shader_load_cs(&game.sp_compute, SHADER_COMPUTE)
 
     // Render texture setup
-    gl.GenTextures(1, &game.render_texture)
+    gl.GenTextures(1, &game.texture_render)
     gl.ActiveTexture(gl.TEXTURE0)
-    gl.BindTexture(gl.TEXTURE_2D, game.render_texture)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_render)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, RENDER_TEXTURE_WIDTH, RENDER_TEXTURE_HEIGHT, 0, gl.RGBA, gl.FLOAT, nil)
-    gl.BindImageTexture(0, game.render_texture, 0, gl.FALSE, 0, gl.READ_ONLY, gl.RGBA32F)
+    gl.BindImageTexture(0, game.texture_render, 0, gl.FALSE, 0, gl.READ_ONLY, gl.RGBA32F)
     
     // Load font
-    game.font_texture = texture_load(TEXTURE_FONT, filtering = false)
-
-    // Set texture units
-    gl.UseProgram(game.sp_screen)
-    shader_set_int(game.sp_screen, "render_texture", 0)
-    gl.ActiveTexture(gl.TEXTURE0)
-    gl.BindTexture(gl.TEXTURE_2D, game.render_texture)
-    gl.UseProgram(game.sp_font)
-    shader_set_int(game.sp_font, "font_texture", 1)
-    gl.ActiveTexture(gl.TEXTURE1)
-    gl.BindTexture(gl.TEXTURE_2D, game.font_texture)
+    game.texture_font = texture_load(TEXTURE_FONT, filtering = false)
     
-    // Compute shader setup
+    // Load terrain textures
+    game.texture_terrain_color = texture_load("./assets/terrain/color.png", filtering = false)
+    game.texture_terrain_height = texture_load("./assets/terrain/height.png", filtering = false)
+
+    // Shader program and texture unit setup
+    gl.UseProgram(game.sp_screen)
+    shader_set_int(game.sp_screen, "texture_render", 0)
+    gl.ActiveTexture(gl.TEXTURE0)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_render)
+    gl.UseProgram(game.sp_font)
+    shader_set_int(game.sp_font, "texture_font", 1)
+    gl.ActiveTexture(gl.TEXTURE1)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_font)
     gl.UseProgram(game.sp_compute)
-    shader_set_uint(game.sp_compute, "width", RENDER_TEXTURE_WIDTH)
+    shader_set_float(game.sp_compute, "width", RENDER_TEXTURE_WIDTH)
     shader_set_uint(game.sp_compute, "height", RENDER_TEXTURE_HEIGHT)
+    shader_set_float(game.sp_compute, "cam_clip", CAM_CLIP)
+    shader_set_float(game.sp_compute, "terrain_size", TERRAIN_SIZE)
+    shader_set_float(game.sp_compute, "terrain_scale", TERRAIN_SCALE)
+    shader_set_int(game.sp_compute, "texture_terrain_color", 2)
+    gl.ActiveTexture(gl.TEXTURE2)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_terrain_color)
+    shader_set_int(game.sp_compute, "texture_terrain_height", 3)
+    gl.ActiveTexture(gl.TEXTURE3)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_terrain_height)
 }
 
 
@@ -116,7 +124,9 @@ game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_ESCAPE) == glfw.PRESS { glfw.SetWindowShouldClose(game.window, true) }
 }
 
+
 game_update :: proc(game: ^Game) {
+    gl_check_error()
     game.time = glfw.GetTime()
     game.dt = game.time - game.prev_time
     if game.dt > 0.0 && game.frame > game.fps {
@@ -125,27 +135,41 @@ game_update :: proc(game: ^Game) {
     }
     game.prev_time = game.time
     game.frame += 1
+
+    game.camera.chunk_pos = {512, 512}
+    game.camera.pos = {512, 512, (CAM_Z_MIN + CAM_Z_MAX) / 2}
+    game.camera.chunk_pos.x = f32(glfw.GetTime()) * 10;
+    game.camera.tilt = -50.0
+    sin := math.sin_f32(game.camera.rot)
+    cos := math.cos_f32(game.camera.rot)
+    game.camera.clip_l = {cos * CAM_CLIP + sin * CAM_CLIP, sin * CAM_CLIP - cos * CAM_CLIP}
+    game.camera.clip_r = {cos * CAM_CLIP - sin * CAM_CLIP, sin * CAM_CLIP + cos * CAM_CLIP}
 }
 
+
 game_render :: proc(game: ^Game) {
-    
     // Clear screen
     gl.ClearColor(0.2, 0.3, 0.3, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
     // Generate render texture using compute shader
     gl.UseProgram(game.sp_compute)
+    shader_set_vec2(game.sp_compute, "camera.chunk_pos", game.camera.chunk_pos)
+    shader_set_vec2(game.sp_compute, "camera.clip_l", game.camera.clip_l)
+    shader_set_vec2(game.sp_compute, "camera.clip_r", game.camera.clip_r)
+    shader_set_float(game.sp_compute, "camera.z", game.camera.pos.z)
+    shader_set_float(game.sp_compute, "camera.tilt", game.camera.tilt)
     gl.DispatchCompute(RENDER_TEXTURE_WIDTH/10, 1, 1)
     gl.MemoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
     // Display render texture
     gl.UseProgram(game.sp_screen)
-    gl.DrawArrays(gl.TRIANGLES, 0, 3)
+    gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
     // Render font
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_font)
-    font_render_u32(game, 0, 0, 2, {1.0, 1.0, 1.0}, game.fps)
+    font_render_u32(game, 4, 0, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ), game.fps)
     //font_render_string(game, 0, 48, 2, {1.0, 1.0, 1.0}, "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcd")
 
     // Swap buffers

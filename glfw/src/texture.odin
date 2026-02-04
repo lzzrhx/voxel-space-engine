@@ -1,9 +1,9 @@
 package main
-
 import "core:log"
 import "core:os"
 import stbi "vendor:stb/image"
 import gl "vendor:OpenGL"
+
 
 texture_load :: proc(filename: cstring, filtering: bool = true) -> u32 {
     texture_id: u32

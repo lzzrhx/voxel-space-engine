@@ -1,28 +1,34 @@
 package main
-
 import "core:log"
 import "core:mem"
 import "vendor:glfw"
 
 
-WINDOW_WIDTH            :: 1920
-WINDOW_HEIGHT           :: 1080
-WINDOW_TITLE            :: "gl"
-GL_VERSION_MAJOR        :: 4
-GL_VERSION_MINOR        :: 3
-SHADER_SCREEN_VERT      :: "./src/shaders/screen.vert"
-SHADER_SCREEN_FRAG      :: "./src/shaders/screen.frag"
-SHADER_COMPUTE          :: "./src/shaders/compute.comp"
-SHADER_FONT_VERT        :: "./src/shaders/font.vert"
-SHADER_FONT_FRAG        :: "./src/shaders/font.frag"
-RENDER_TEXTURE_WIDTH    :: 1000
-RENDER_TEXTURE_HEIGHT   :: 1000
-OPTION_VSYNC            :: false
-OPTION_ANTI_ALIAS       :: true
-OPTION_GAMMA_CORRECTION :: true
-TEXTURE_FONT            :: "./assets/font.png"
-FONT_WIDTH              :: 8
-FONT_HEIGHT             :: 16
+WINDOW_WIDTH              :: 1920
+WINDOW_HEIGHT             :: 1080
+WINDOW_TITLE              :: "gl"
+GL_VERSION_MAJOR          :: 4
+GL_VERSION_MINOR          :: 3
+SHADER_SCREEN_VERT        :: "./src/glsl/screen.vert"
+SHADER_SCREEN_FRAG        :: "./src/glsl/screen.frag"
+SHADER_COMPUTE            :: "./src/glsl/compute.comp"
+SHADER_FONT_VERT          :: "./src/glsl/font.vert"
+SHADER_FONT_FRAG          :: "./src/glsl/font.frag"
+RENDER_TEXTURE_WIDTH      :: 960
+RENDER_TEXTURE_HEIGHT     :: 540
+OPTION_VSYNC              :: false
+OPTION_ANTI_ALIAS         :: true
+OPTION_GAMMA_CORRECTION   :: true
+TEXTURE_FONT              :: "./assets/font.png"
+FONT_WIDTH                :: 8
+FONT_HEIGHT               :: 16
+TERRAIN_DEFAULT_COLORMAP  :: "./assets/terrain/default-color.png"
+TERRAIN_DEFAULT_HEIGHTMAP :: "./assets/terrain/default-height.png"
+CAM_CLIP                  :: 700
+CAM_Z_MIN              :f32: 0
+CAM_Z_MAX              :f32: 400
+TERRAIN_SIZE              :: 1024
+TERRAIN_SCALE             :: 100
 
 
 main :: proc() {
@@ -35,7 +41,7 @@ main :: proc() {
     defer mem_check_leaks(&tracking_allocator)
 
     // Program initialization
-    game := &Game{}
+    game := &Game{ camera = &Camera{} }
     game_init(game)
     game_setup(game)
 
