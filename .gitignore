@@ -1,4 +1,6 @@
+# Extensionless files (except Makefile)
 *
+!Makefile
 !/**/
 !*.*
 

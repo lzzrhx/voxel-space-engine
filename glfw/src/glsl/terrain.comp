@@ -44,7 +44,7 @@ void main() {
         uint terrain_height = uint(texture(height_tex, tex_coords).r * 255.0);
         uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.tilt);
         if (z >= 0 && z <= render_height && z < max_z) {
-            if (max_z == render_height && (ipos.y > terrain_size-2 || ipos.x == 0 || ipos.x == terrain_size-1)) {
+            if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {
                 draw_line(x, z + 1, max_z, cam_clip, sky_color);
                 max_z = z + 1;
             }

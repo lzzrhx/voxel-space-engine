@@ -6,7 +6,7 @@ import "vendor:glfw"
 
 GL_VERSION_MAJOR          :: 4
 GL_VERSION_MINOR          :: 3
-WINDOW_TITLE              :: "voxel"
+WINDOW_TITLE              :: "vox"
 WINDOW_WIDTH              :: 1920
 WINDOW_HEIGHT             :: 1080
 WORLD_RENDER_WIDTH        :: 960
@@ -17,23 +17,23 @@ SHADER_TERRAIN            :: "./src/glsl/terrain.comp"
 SHADER_FONT_VERT          :: "./src/glsl/font.vert"
 SHADER_FONT_FRAG          :: "./src/glsl/font.frag"
 OPTION_VSYNC              :: false
-OPTION_ANTI_ALIAS         :: true
-OPTION_GAMMA_CORRECTION   :: true
+OPTION_ANTI_ALIAS         :: false
+OPTION_GAMMA_CORRECTION   :: false
 FONT_PATH                 :: "./assets/font.png"
 FONT_WIDTH                :: 8
 FONT_HEIGHT               :: 16
 TERRAIN_DEFAULT_COLORMAP  :: "./assets/terrain/default-color.png"
 TERRAIN_DEFAULT_HEIGHTMAP :: "./assets/terrain/default-height.png"
 TERRAIN_SIZE              :: 1024
-TERRAIN_SCALE             :: 100
+TERRAIN_SCALE             :: 150
 CAM_DIST_MIN              :: 100
 CAM_DIST_MAX              :: 200
 CAM_Z_MIN                 :: 0
 CAM_Z_MAX                 :: 400
 CAM_SPEED                 :: 200
 CAM_CLIP                  :: 700
-SKY_COLOR                 :: glsl.vec3(0.1)
-//CAM_FOG_START           :: 500
+SKY_COLOR                 :: glsl.vec3(0.2)
+FOG_START                 :: 0.6
 //CAM_HEIGHT_COLLISION    :: 10
 
 main :: proc() {

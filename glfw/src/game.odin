@@ -105,6 +105,9 @@ game_init :: proc(game: ^Game) {
 
     // Shader program and texture unit setup
     gl.UseProgram(game.sp_screen)
+    shader_set_vec3(game.sp_screen, "sky_color", SKY_COLOR)
+    shader_set_float(game.sp_screen, "fog_start", FOG_START)
+    shader_set_vec2(game.sp_screen, "window_world_ratio", {WINDOW_WIDTH / WORLD_RENDER_WIDTH * 2, WINDOW_HEIGHT / WORLD_RENDER_HEIGHT * 2})
     shader_set_int(game.sp_screen, "terrain_colorbuf", 0)
     shader_set_int(game.sp_screen, "terrain_depthbuf", 1)
     gl.ActiveTexture(gl.TEXTURE0)
@@ -194,5 +197,12 @@ game_exit :: proc(game: ^Game) {
     gl.DeleteProgram(game.sp_screen)
     gl.DeleteProgram(game.sp_terrain)
     gl.DeleteProgram(game.sp_font)
+    gl.DeleteVertexArrays(1, &game.vao)
+    gl.DeleteBuffers(1, &game.vbo)
+    gl.DeleteTextures(1, &game.font_tex)
+    gl.DeleteTextures(1, &game.terrain_colorbuf)
+    gl.DeleteTextures(1, &game.terrain_depthbuf)
+    gl.DeleteTextures(1, &game.terrain_color_tex)
+    gl.DeleteTextures(1, &game.terrain_height_tex)
     glfw.Terminate()
 }
