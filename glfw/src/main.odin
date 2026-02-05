@@ -4,40 +4,37 @@ import "core:mem"
 import "core:math/linalg/glsl"
 import "vendor:glfw"
 
-
-WINDOW_WIDTH              :: 1920
-WINDOW_HEIGHT             :: 1080
-WINDOW_TITLE              :: "gl"
 GL_VERSION_MAJOR          :: 4
 GL_VERSION_MINOR          :: 3
+WINDOW_TITLE              :: "voxel"
+WINDOW_WIDTH              :: 1920
+WINDOW_HEIGHT             :: 1080
+WORLD_RENDER_WIDTH        :: 960
+WORLD_RENDER_HEIGHT       :: 540
 SHADER_SCREEN_VERT        :: "./src/glsl/screen.vert"
 SHADER_SCREEN_FRAG        :: "./src/glsl/screen.frag"
 SHADER_TERRAIN            :: "./src/glsl/terrain.comp"
 SHADER_FONT_VERT          :: "./src/glsl/font.vert"
 SHADER_FONT_FRAG          :: "./src/glsl/font.frag"
-RENDER_TEXTURE_WIDTH      :: 960
-RENDER_TEXTURE_HEIGHT     :: 540
 OPTION_VSYNC              :: false
 OPTION_ANTI_ALIAS         :: true
 OPTION_GAMMA_CORRECTION   :: true
-TEXTURE_FONT              :: "./assets/font.png"
+FONT_PATH                 :: "./assets/font.png"
 FONT_WIDTH                :: 8
 FONT_HEIGHT               :: 16
 TERRAIN_DEFAULT_COLORMAP  :: "./assets/terrain/default-color.png"
 TERRAIN_DEFAULT_HEIGHTMAP :: "./assets/terrain/default-height.png"
 TERRAIN_SIZE              :: 1024
 TERRAIN_SCALE             :: 100
-
-CAM_DIST_MIN           :f32: 100
-CAM_DIST_MAX           :f32: 200
-CAM_Z_MIN              :f32: 0
-CAM_Z_MAX              :f32: 400
+CAM_DIST_MIN              :: 100
+CAM_DIST_MAX              :: 200
+CAM_Z_MIN                 :: 0
+CAM_Z_MAX                 :: 400
 CAM_SPEED                 :: 200
 CAM_CLIP                  :: 700
-CAM_FOG_START             :: 500
-CAM_HEIGHT_COLLISION      :: 10
-SKY_COLOR        :glsl.vec3: {0.1, 0.1, 0.1}
-
+SKY_COLOR                 :: glsl.vec3(0.1)
+//CAM_FOG_START           :: 500
+//CAM_HEIGHT_COLLISION    :: 10
 
 main :: proc() {
     // Tracking allocator and logger set up

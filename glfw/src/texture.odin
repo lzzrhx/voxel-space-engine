@@ -4,7 +4,6 @@ import "core:os"
 import stbi "vendor:stb/image"
 import gl "vendor:OpenGL"
 
-
 texture_load :: proc(filename: cstring, filtering: bool = true) -> u32 {
     texture_id: u32
     img_width, img_height, img_channels: i32

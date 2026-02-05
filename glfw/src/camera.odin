@@ -13,17 +13,7 @@ Camera :: struct {
     target: glsl.vec2,
     clip_l: glsl.vec2,
     clip_r: glsl.vec2,
-    //fog_start: u32,
-    //fog_end: u32,
     txt: string,
-}
-
-camera_set :: proc(camera: ^Camera, pos: glsl.vec2, z: f32 = (CAM_Z_MIN + CAM_Z_MAX) / 2.0, rot: f32 = 0.0, dist: f32 = (CAM_DIST_MIN + CAM_DIST_MAX) / 2.0) {
-    camera.target = pos
-    camera.z = z
-    camera.rot = math.PI * 1.5 + rot
-    camera.dist = dist
-    camera_update_values(camera)
 }
 
 camera_pos_from_target :: proc(target: glsl.vec2, dist, rot: f32) -> glsl.vec2 {
@@ -38,7 +28,15 @@ camera_update_values :: proc(camera: ^Camera, update_pos: bool = true) {
     cos := math.cos_f32(camera.rot)
     camera.clip_l = {cos * CAM_CLIP + sin * CAM_CLIP, sin * CAM_CLIP - cos * CAM_CLIP}
     camera.clip_r = {cos * CAM_CLIP - sin * CAM_CLIP, sin * CAM_CLIP + cos * CAM_CLIP}
-    camera.txt = fmt.tprintf("camera: x=%v y=%v z=%v rot=%v tilt=%v", camera.pos.x, camera.pos.y, camera.z, camera.rot, camera.tilt)
+    camera.txt = fmt.tprintf("camera: x=%.f y=%.f z=%.f rot=%.2f tilt=%.f", camera.pos.x, camera.pos.y, camera.z, camera.rot, camera.tilt)
+}
+
+camera_set :: proc(camera: ^Camera, pos: glsl.vec2, z: f32 = (CAM_Z_MIN + CAM_Z_MAX) / 2.0, rot: f32 = 0.0, dist: f32 = (CAM_DIST_MIN + CAM_DIST_MAX) / 2.0) {
+    camera.target = pos
+    camera.z = z
+    camera.rot = math.PI * 1.5 + rot
+    camera.dist = dist
+    camera_update_values(camera)
 }
 
 camera_modify :: proc(camera: ^Camera, dpos: glsl.vec2 = {0.0, 0.0}, dz: f32 = 0.0, drot: f32 = 0.0, ddist: f32 = 0.0) {

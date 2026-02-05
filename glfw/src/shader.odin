@@ -45,6 +45,7 @@ shader_load_vs_gs_fs :: proc(sp: ^u32, vs, gs, fs: string) {
         os.exit(1)
     }
 }
+
 shader_load_cs :: proc(sp: ^u32, cs: string) {
     ok: bool
     sp^, ok = gl.load_compute_file(cs)
