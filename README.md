@@ -9,3 +9,5 @@ The folder doslike contains a version for the [DOS-like](https://github.com/matt
 The folder picotron contains a version for the [Picotron](https://www.lexaloffle.com/picotron.php) fantasy console written in Lua.
 
 The folder sdl2 contains a version using SDL2 written in Odin.
+
+The folder glfw contains a version using GLFW / OpenGL written in Odin / GLSL.

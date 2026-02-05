@@ -22,12 +22,14 @@ Game :: struct {
     dt:             f64,
     fps:            u32,
     texture_render: u32,
+    texture_depth: u32,
     texture_font:   u32,
     texture_terrain_color:   u32,
     texture_terrain_height:   u32,
     ndc_pixel_w:    f32,
     ndc_pixel_h:    f32,
     camera:         ^Camera,
+    option_render_depthbuffer: bool,
 }
 
 
@@ -68,7 +70,7 @@ game_init :: proc(game: ^Game) {
     // Load shaders
     shader_load_vs_fs(&game.sp_font, SHADER_FONT_VERT, SHADER_FONT_FRAG)
     shader_load_vs_fs(&game.sp_screen, SHADER_SCREEN_VERT, SHADER_SCREEN_FRAG)
-    shader_load_cs(&game.sp_compute, SHADER_COMPUTE)
+    shader_load_cs(&game.sp_compute, SHADER_TERRAIN)
 
     // Render texture setup
     gl.GenTextures(1, &game.texture_render)
@@ -80,6 +82,17 @@ game_init :: proc(game: ^Game) {
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, RENDER_TEXTURE_WIDTH, RENDER_TEXTURE_HEIGHT, 0, gl.RGBA, gl.FLOAT, nil)
     gl.BindImageTexture(0, game.texture_render, 0, gl.FALSE, 0, gl.READ_ONLY, gl.RGBA32F)
+    
+    // Depth texture setup
+    gl.GenTextures(1, &game.texture_depth)
+    gl.ActiveTexture(gl.TEXTURE1)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_depth)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.TexImage2D(gl.TEXTURE_2D, 0, gl.R8, RENDER_TEXTURE_WIDTH, RENDER_TEXTURE_HEIGHT, 0, gl.RED, gl.FLOAT, nil)
+    gl.BindImageTexture(1, game.texture_depth, 0, gl.FALSE, 0, gl.READ_ONLY, gl.R8)
     
     // Load font
     game.texture_font = texture_load(TEXTURE_FONT, filtering = false)
@@ -94,25 +107,24 @@ game_init :: proc(game: ^Game) {
     gl.ActiveTexture(gl.TEXTURE0)
     gl.BindTexture(gl.TEXTURE_2D, game.texture_render)
     gl.UseProgram(game.sp_font)
-    shader_set_int(game.sp_font, "texture_font", 1)
-    gl.ActiveTexture(gl.TEXTURE1)
+    shader_set_int(game.sp_font, "texture_font", 2)
+    gl.ActiveTexture(gl.TEXTURE2)
     gl.BindTexture(gl.TEXTURE_2D, game.texture_font)
     gl.UseProgram(game.sp_compute)
     shader_set_float(game.sp_compute, "width", RENDER_TEXTURE_WIDTH)
     shader_set_uint(game.sp_compute, "height", RENDER_TEXTURE_HEIGHT)
-    shader_set_float(game.sp_compute, "cam_clip", CAM_CLIP)
-    shader_set_float(game.sp_compute, "terrain_size", TERRAIN_SIZE)
+    shader_set_uint(game.sp_compute, "cam_clip", CAM_CLIP)
+    shader_set_uint(game.sp_compute, "terrain_size", TERRAIN_SIZE)
     shader_set_float(game.sp_compute, "terrain_scale", TERRAIN_SCALE)
-    shader_set_int(game.sp_compute, "texture_terrain_color", 2)
-    gl.ActiveTexture(gl.TEXTURE2)
-    gl.BindTexture(gl.TEXTURE_2D, game.texture_terrain_color)
-    shader_set_int(game.sp_compute, "texture_terrain_height", 3)
+    shader_set_vec3(game.sp_compute, "sky_color", SKY_COLOR)
+    shader_set_int(game.sp_compute, "texture_terrain_color", 3)
     gl.ActiveTexture(gl.TEXTURE3)
+    gl.BindTexture(gl.TEXTURE_2D, game.texture_terrain_color)
+    shader_set_int(game.sp_compute, "texture_terrain_height", 4)
+    gl.ActiveTexture(gl.TEXTURE4)
     gl.BindTexture(gl.TEXTURE_2D, game.texture_terrain_height)
-}
 
-
-game_setup :: proc(game: ^Game) {
+    // Vertex array object & vertex buffer object setup
     gl.GenVertexArrays(1, &game.vao)
     gl.GenBuffers(1, &game.vbo)
     gl.BindVertexArray(game.vao)
@@ -120,8 +132,23 @@ game_setup :: proc(game: ^Game) {
 }
 
 
+game_setup :: proc(game: ^Game) {
+    camera_set(game.camera, {512.0, 512.0})
+}
+
+
 game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_ESCAPE) == glfw.PRESS { glfw.SetWindowShouldClose(game.window, true) }
+    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.camera, dpos = { math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt),  math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.camera, dpos = {-math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.camera, dpos = { math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.camera, dpos = {-math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.camera, dz =  200.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.camera, dz = -200.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.camera, drot =  1.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_D)      == glfw.PRESS { camera_modify(game.camera, drot = -1.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_Q)      == glfw.PRESS { camera_modify(game.camera, ddist =  100.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_E)      == glfw.PRESS { camera_modify(game.camera, ddist = -100.0 * f32(game.dt)) }
 }
 
 
@@ -135,15 +162,6 @@ game_update :: proc(game: ^Game) {
     }
     game.prev_time = game.time
     game.frame += 1
-
-    game.camera.chunk_pos = {512, 512}
-    game.camera.pos = {512, 512, (CAM_Z_MIN + CAM_Z_MAX) / 2}
-    game.camera.chunk_pos.x = f32(glfw.GetTime()) * 10;
-    game.camera.tilt = -50.0
-    sin := math.sin_f32(game.camera.rot)
-    cos := math.cos_f32(game.camera.rot)
-    game.camera.clip_l = {cos * CAM_CLIP + sin * CAM_CLIP, sin * CAM_CLIP - cos * CAM_CLIP}
-    game.camera.clip_r = {cos * CAM_CLIP - sin * CAM_CLIP, sin * CAM_CLIP + cos * CAM_CLIP}
 }
 
 
@@ -157,7 +175,7 @@ game_render :: proc(game: ^Game) {
     shader_set_vec2(game.sp_compute, "camera.chunk_pos", game.camera.chunk_pos)
     shader_set_vec2(game.sp_compute, "camera.clip_l", game.camera.clip_l)
     shader_set_vec2(game.sp_compute, "camera.clip_r", game.camera.clip_r)
-    shader_set_float(game.sp_compute, "camera.z", game.camera.pos.z)
+    shader_set_float(game.sp_compute, "camera.z", game.camera.z)
     shader_set_float(game.sp_compute, "camera.tilt", game.camera.tilt)
     gl.DispatchCompute(RENDER_TEXTURE_WIDTH/10, 1, 1)
     gl.MemoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
@@ -170,7 +188,7 @@ game_render :: proc(game: ^Game) {
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_font)
     font_render_u32(game, 4, 0, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ), game.fps)
-    //font_render_string(game, 0, 48, 2, {1.0, 1.0, 1.0}, "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcd")
+    font_render_string(game, 0, 1080-32, 2, {1.0, 1.0, 1.0}, game.camera.txt)
 
     // Swap buffers
     glfw.SwapBuffers(game.window)

@@ -1,0 +1,59 @@
+#version 430 core
+
+struct Camera {
+    vec2 clip_r;
+    vec2 clip_l;
+    vec2 chunk_pos;
+    float z;
+    float tilt;
+    // fog start
+    // fog end
+};
+
+// In
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+// Uniform
+layout(rgba32f, binding = 0) uniform image2D texture_render;
+layout(rgba32f, binding = 1) uniform image2D texture_depth;
+uniform float width;
+uniform uint height;
+uniform sampler2D texture_terrain_color;
+uniform sampler2D texture_terrain_height;
+uniform Camera camera;
+uniform uint cam_clip;
+uniform uint terrain_size;
+uniform float terrain_scale;
+uniform vec3 sky_color;
+
+void draw_line(uint x, uint y_start, uint y_end, uint depth, vec3 color) {
+    for (uint y = y_start; y < y_end; y++) {
+        imageStore(texture_render, ivec2(x, y), vec4(color, 1.0));
+        imageStore(texture_depth, ivec2(x, y), vec4(vec3(float(depth)/float(cam_clip)), 1.0));
+    }
+}
+
+void main() {
+    uint x = gl_GlobalInvocationID.x;
+    vec2 delta = vec2((camera.clip_l.x + (camera.clip_r.x - camera.clip_l.x) / width * x) / float(cam_clip), (camera.clip_l.y + (camera.clip_r.y - camera.clip_l.y) / width * float(x)) / float(cam_clip));
+    vec2 pos = camera.chunk_pos;
+    uint max_z = height;
+    for (uint depth = 1; depth < cam_clip; depth++) {
+        pos += delta;
+        ivec2 ipos = ivec2(pos);
+        if (ipos.x < 0 || ipos.x > terrain_size-1 || ipos.y < 0 || ipos.y > terrain_size-1) { continue; }
+        vec2 tex_coords = vec2(ipos.x / width, ipos.y / float(height));
+        uint terrain_height = uint(texture(texture_terrain_height, tex_coords).r * 255.0);
+        uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.tilt);
+        if (z >= 0 && z <= height && z < max_z) {
+            if (max_z == height && (ipos.y > terrain_size-2 || ipos.x == 0 || ipos.x == terrain_size-1)) {
+                draw_line(x, z + 1, max_z, cam_clip, sky_color);
+                max_z = z + 1;
+            }
+            vec3 color = texture(texture_terrain_color, tex_coords).rgb;
+            draw_line(x, z, max_z, depth, color);
+            max_z = z;
+        }
+    }
+    if (max_z > 0) { draw_line(x, 0, max_z, cam_clip, sky_color); }
+}
