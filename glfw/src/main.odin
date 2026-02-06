@@ -22,7 +22,7 @@ OPTION_GAMMA_CORRECTION   :: false
 FONT_PATH                 :: "./assets/font.png"
 FONT_WIDTH                :: 8
 FONT_HEIGHT               :: 16
-FONT_MAX_CHARS            :: 1000
+FONT_MAX_CHARS            :: 12000
 FONT_SPACING              :: 2
 TERRAIN_DEFAULT_COLORMAP  :: "./assets/terrain/default-color.png"
 TERRAIN_DEFAULT_HEIGHTMAP :: "./assets/terrain/default-height.png"

@@ -19,8 +19,11 @@ uniform float spacing;
 out vec2 vs_tex_coords;
 
 void main() {
+    uint character = in_char & 255u;
+    uint line = (in_char >> 8) & 255u;
+    uint col = (in_char >> 16) & 255u;
     vec2 ndc_size = ndc_pixel * size * scale;
     vec4 vert_coords = coords[gl_VertexID];
-    gl_Position = vec4((vert_coords.x + gl_InstanceID + 0.5) * ndc_size.x + (pos.x + spacing * gl_InstanceID) * ndc_pixel.x - 1.0, (vert_coords.y - 0.5) * ndc_size.y - pos.y * ndc_pixel.y + 1.0, 0.0, 1.0);
-    vs_tex_coords = vec2((vert_coords.z + in_char % 32u) / 32, (vert_coords.w + in_char / 32u) / 3);
+    gl_Position = vec4((vert_coords.x + col + 0.5) * ndc_size.x + (pos.x + spacing * col) * ndc_pixel.x - 1.0, (vert_coords.y - 0.5 - line) * ndc_size.y - pos.y * ndc_pixel.y + 1.0, 0.0, 1.0);
+    vs_tex_coords = vec2((vert_coords.z + character % 32u) / 32, (vert_coords.w + character / 32u) / 3);
 }
