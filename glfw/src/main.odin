@@ -22,6 +22,8 @@ OPTION_GAMMA_CORRECTION   :: false
 FONT_PATH                 :: "./assets/font.png"
 FONT_WIDTH                :: 8
 FONT_HEIGHT               :: 16
+FONT_MAX_CHARS            :: 1000
+FONT_SPACING              :: 2
 TERRAIN_DEFAULT_COLORMAP  :: "./assets/terrain/default-color.png"
 TERRAIN_DEFAULT_HEIGHTMAP :: "./assets/terrain/default-height.png"
 TERRAIN_SIZE              :: 1024
@@ -35,6 +37,7 @@ CAM_CLIP                  :: 700
 SKY_COLOR                 :: glsl.vec3(0.2)
 FOG_START                 :: 0.6
 //CAM_HEIGHT_COLLISION    :: 10
+
 
 main :: proc() {
     // Tracking allocator and logger set up

@@ -10,8 +10,7 @@ import gl "vendor:OpenGL"
 
 Game :: struct {
     window:             glfw.WindowHandle,
-    ndc_pixel_w:        f32,
-    ndc_pixel_h:        f32,
+    ndc_pixel:          glsl.vec2,
     sp_terrain:         u32,
     sp_screen:          u32,
     sp_font:            u32,
@@ -28,6 +27,9 @@ Game :: struct {
     prev_time:          f64,
     dt:                 f64,
     fps:                u32,
+    font_vao:           u32,
+    font_vbo:           u32,
+    font_chars:         ^[FONT_MAX_CHARS]u32,
 }
 
 gl_check_error :: proc(location := #caller_location) {
@@ -53,8 +55,7 @@ game_init :: proc(game: ^Game) {
     if !OPTION_VSYNC { glfw.SwapInterval(0) }
     gl.load_up_to(GL_VERSION_MAJOR, GL_VERSION_MINOR, glfw.gl_set_proc_address)
     gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
-    game.ndc_pixel_w = 1.0 / WINDOW_WIDTH
-    game.ndc_pixel_h = 1.0 / WINDOW_HEIGHT
+    game.ndc_pixel = {2.0 / WINDOW_WIDTH, 2.0 / WINDOW_HEIGHT}
     
     // OpenGL settings
     gl.Enable(gl.CULL_FACE)
@@ -96,8 +97,21 @@ game_init :: proc(game: ^Game) {
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.R32F, WORLD_RENDER_WIDTH, WORLD_RENDER_HEIGHT, 0, gl.RED, gl.UNSIGNED_BYTE, nil)
     gl.BindImageTexture(1, game.terrain_depthbuf, 0, gl.FALSE, 0, gl.READ_ONLY, gl.R32F)
 
-    // Load font
+    // Font setup
+    game.font_chars = new([FONT_MAX_CHARS]u32)
     game.font_tex = texture_load(FONT_PATH, filtering = false)
+    gl.GenVertexArrays(1, &game.font_vao)
+    gl.BindVertexArray(game.font_vao)
+    gl.GenBuffers(1, &game.font_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, game.font_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, FONT_MAX_CHARS * size_of(u32), raw_data(game.font_chars), gl.STATIC_DRAW)
+    gl.impl_VertexAttribIPointer(0, 1, gl.UNSIGNED_INT, size_of(u32), 0)
+    gl.VertexAttribDivisor(0, 1)
+    gl.EnableVertexAttribArray(0)
+    gl.UseProgram(game.sp_font)
+    shader_set_float(game.sp_font, "spacing", FONT_SPACING)
+    shader_set_vec2(game.sp_font, "ndc_pixel", game.ndc_pixel)
+    shader_set_vec2(game.sp_font, "size", {FONT_WIDTH, FONT_HEIGHT})
     
     // Load terrain textures
     game.terrain_color_tex = texture_load("./assets/terrain/color.png", filtering = false)
@@ -167,6 +181,7 @@ game_render :: proc(game: ^Game) {
     gl.ClearColor(0.2, 0.3, 0.3, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.Enable(gl.DEPTH_TEST)
+    gl.BindVertexArray(game.vao)
 
     // Generate terrain colorbuffer and depthbuffer using compute shader
     gl.UseProgram(game.sp_terrain)
@@ -183,10 +198,17 @@ game_render :: proc(game: ^Game) {
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
     // Draw font
+    gl.BindVertexArray(game.font_vao)
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_font)
-    font_render_u32(game, 4, 0, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ), game.fps)
-    font_render_string(game, 4, 1080-32, 2, {1.0, 1.0, 1.0}, game.camera.txt)
+    
+    font_render_u32(game, 2, 0, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ), game.fps)
+    //font_render_string(game, 2, 32, 1, {1.0, 1.0, 1.0}, "abcdefghijklmnopqrst")
+
+    font_render_string(game, 2, 1080-32, 2, {1.0, 1.0, 1.0}, game.camera.txt)
+    //for i in 1..<34 {
+    //    font_render_string(game, 0, 16+16*f32(i), 1, {1.0, 1.0, 1.0}, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    //}
 
     // Swap buffers
     glfw.SwapBuffers(game.window)
@@ -194,6 +216,7 @@ game_render :: proc(game: ^Game) {
 }
 
 game_exit :: proc(game: ^Game) {
+    free(game.font_chars)
     gl.DeleteProgram(game.sp_screen)
     gl.DeleteProgram(game.sp_terrain)
     gl.DeleteProgram(game.sp_font)
