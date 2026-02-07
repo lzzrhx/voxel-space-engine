@@ -8,7 +8,7 @@ font_render :: proc {
     font_render_string,
 }
 
-font_render_u32 :: proc(game: ^Game, x, y, scale: f32, color: glsl.vec3, num: u32) {
+font_render_u32 :: proc(game: ^Game, x, y: f32, num: u32, scale: f32 = 1.0, color: glsl.vec3 = {1.0, 1.0, 1.0}) {
     count := u32_num_digits(num)
     for i, n := count - 1, num; n > 0; i-= 1 {
         game.font_chars[i] = (16 + n % 10) | (i << 16)
@@ -17,7 +17,7 @@ font_render_u32 :: proc(game: ^Game, x, y, scale: f32, color: glsl.vec3, num: u3
     if (count > 0) { font_draw_call(game, count, x, y, scale, color) }
 }
 
-font_render_string :: proc(game: ^Game, x, y, scale: f32, color: glsl.vec3, txt: string) {
+font_render_string :: proc(game: ^Game, x, y: f32, txt: string, scale: f32 = 1.0, color: glsl.vec3 = {1.0, 1.0, 1.0}) {
     count: u32
     col: u32
     line: u32
@@ -26,8 +26,7 @@ font_render_string :: proc(game: ^Game, x, y, scale: f32, color: glsl.vec3, txt:
         if u32(r) == 10 {
             line += 1
             col = 0
-        }
-        else if n := (u32(r) < 32 || u32(r) > 127) ? 63 - 32 : u32(r) - 32; count < FONT_MAX_CHARS {
+        } else if n := (u32(r) < 32 || u32(r) > 127) ? 63 - 32 : u32(r) - 32; count < FONT_MAX_CHARS {
             if r == 'n' && prev == '\\' {
                 line += 1
                 col = 0
@@ -41,7 +40,6 @@ font_render_string :: proc(game: ^Game, x, y, scale: f32, color: glsl.vec3, txt:
         }
     }
     if (count > 0) { font_draw_call(game, count, x, y, scale, color) }
-    font_render(game, 0, 1080-32, 2, color, count)
 }
 
 font_draw_call :: proc(game: ^Game, count: u32, x, y, scale: f32, color: glsl.vec3) {

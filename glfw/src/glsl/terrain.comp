@@ -4,8 +4,8 @@ layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
 struct Camera {
     vec2 clip_r;
     vec2 clip_l;
-    vec2 chunk_pos;
-    float z;
+    vec3 pos;
+    vec2 target;
     float tilt;
 };
 
@@ -15,7 +15,7 @@ uniform sampler2D color_tex;
 uniform sampler2D height_tex;
 uniform float render_width;
 uniform uint render_height;
-uniform uint cam_clip;
+uniform uint clip;
 uniform uint terrain_size;
 uniform float terrain_scale;
 uniform vec3 sky_color;
@@ -27,25 +27,25 @@ layout(r32f, binding = 1) uniform image2D out_depthbuffer;
 void draw_line(uint x, uint y_start, uint y_end, uint depth, vec3 color) {
     for (uint y = y_start; y < y_end; y++) {
         imageStore(out_colorbuffer, ivec2(x, y), vec4(color, 1.0));
-        imageStore(out_depthbuffer, ivec2(x, y), vec4(vec3(float(depth)/float(cam_clip)), 1.0));
+        imageStore(out_depthbuffer, ivec2(x, y), vec4(vec3(float(depth)/float(clip)), 1.0));
     }
 }
 
 void main() {
     uint x = gl_GlobalInvocationID.x;
-    vec2 delta = vec2((camera.clip_l.x + (camera.clip_r.x - camera.clip_l.x) / render_width * x) / float(cam_clip), (camera.clip_l.y + (camera.clip_r.y - camera.clip_l.y) / render_width * float(x)) / float(cam_clip));
-    vec2 pos = camera.chunk_pos;
+    vec2 delta = vec2((camera.clip_l.x + (camera.clip_r.x - camera.clip_l.x) / render_width * x) / float(clip), (camera.clip_l.y + (camera.clip_r.y - camera.clip_l.y) / render_width * float(x)) / float(clip));
+    vec2 pos = camera.pos.xy;
     uint max_z = render_height;
-    for (uint depth = 1; depth < cam_clip; depth++) {
+    for (uint depth = 1; depth < clip; depth++) {
         pos += delta;
         ivec2 ipos = ivec2(pos);
         if (ipos.x < 0 || ipos.x > terrain_size-1 || ipos.y < 0 || ipos.y > terrain_size-1) { continue; }
         vec2 tex_coords = vec2(ipos.x / render_width, ipos.y / float(render_height));
         uint terrain_height = uint(texture(height_tex, tex_coords).r * 255.0);
-        uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.tilt);
+        uint z = uint((camera.pos.z - terrain_height) / float(depth) * terrain_scale + camera.tilt);
         if (z >= 0 && z <= render_height && z < max_z) {
             if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {
-                draw_line(x, z + 1, max_z, cam_clip, sky_color);
+                draw_line(x, z + 1, max_z, clip, sky_color);
                 max_z = z + 1;
             }
             vec3 color = texture(color_tex, tex_coords).rgb;
@@ -53,5 +53,5 @@ void main() {
             max_z = z;
         }
     }
-    if (max_z > 0) { draw_line(x, 0, max_z, cam_clip, sky_color); }
+    if (max_z > 0) { draw_line(x, 0, max_z, clip, sky_color); }
 }

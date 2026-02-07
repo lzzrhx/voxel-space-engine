@@ -4,3 +4,7 @@
 
  - Add 3D rendered entities placed on terrain
  - Support for multiple terrain "tiles" (3x3 "chunk space")
+ - Camera/terrain collision
+ - Change camera pos to vec3, add: up, fov, yaw, pitch, roll
+ - Add point lights
+ - 

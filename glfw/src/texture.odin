@@ -8,6 +8,7 @@ texture_load :: proc(filename: cstring, filtering: bool = true) -> u32 {
     texture_id: u32
     img_width, img_height, img_channels: i32
     gl.GenTextures(1, &texture_id)
+    gl.ActiveTexture(gl.TEXTURE0)
     gl.BindTexture(gl.TEXTURE_2D, texture_id)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)

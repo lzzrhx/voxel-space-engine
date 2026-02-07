@@ -20,15 +20,9 @@ uniform vec2 window_world_ratio;
 // Out
 out vec4 out_frag_color;
 
-float smoothstep_q_r(float x) {
-  return x*x/(2.0*x*x-2.0*x+1.0);
-}
-
 void main()
 {
     float depth = texture(terrain_depthbuf, vs_tex_coords).r;
-    //float side_bias = 0.6 + 0.4 * smoothstep_q_r(1.0 - abs(vs_tex_coords.x - 0.5) * 2);
-    //float fog = fog_start * side_bias;
     if (depth < fog_start) {
         out_frag_color = vec4(texture(terrain_colorbuf, vs_tex_coords).rgb, 1.0);
     } else {

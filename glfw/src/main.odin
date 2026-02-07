@@ -16,6 +16,10 @@ SHADER_SCREEN_FRAG        :: "./src/glsl/screen.frag"
 SHADER_TERRAIN            :: "./src/glsl/terrain.comp"
 SHADER_FONT_VERT          :: "./src/glsl/font.vert"
 SHADER_FONT_FRAG          :: "./src/glsl/font.frag"
+SHADER_SOLID_VERT         :: "./src/glsl/solid.vert"
+SHADER_SOLID_FRAG         :: "./src/glsl/solid.frag"
+SHADER_LIGHT_VERT         :: "./src/glsl/light.vert"
+SHADER_LIGHT_FRAG         :: "./src/glsl/light.frag"
 OPTION_VSYNC              :: false
 OPTION_ANTI_ALIAS         :: false
 OPTION_GAMMA_CORRECTION   :: false
@@ -32,12 +36,13 @@ CAM_DIST_MIN              :: 100
 CAM_DIST_MAX              :: 200
 CAM_Z_MIN                 :: 0
 CAM_Z_MAX                 :: 400
-CAM_SPEED                 :: 200
-CAM_CLIP                  :: 700
+CAM_SPEED                 :: 100
+TERRAIN_CLIP              :: 500
 SKY_COLOR                 :: glsl.vec3(0.2)
 FOG_START                 :: 0.6
-//CAM_HEIGHT_COLLISION    :: 10
-
+CAM_CLIP_NEAR             :: 0.1
+CAM_CLIP_FAR              :: 500
+MAX_NUM_LIGHTS            :: 10
 
 main :: proc() {
     // Tracking allocator and logger set up
@@ -49,7 +54,11 @@ main :: proc() {
     defer mem_check_leaks(&tracking_allocator)
 
     // Program initialization
-    game := &Game{ camera = &Camera{} }
+    game := &Game{
+        camera = &Camera{},
+        dir_light     = &DirLight{},
+        lights  = new([MAX_NUM_LIGHTS]Light),
+    }
     game_init(game)
     game_setup(game)
 
@@ -60,6 +69,7 @@ main :: proc() {
         game_render(game)
         glfw.PollEvents()
         mem_check_bad_free(&tracking_allocator)
+        free_all(context.temp_allocator)
     }
    
     // Exit the program
