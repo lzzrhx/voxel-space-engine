@@ -1,6 +1,6 @@
 #version 330 core
 
-vec4 coords[4] = vec4[4](
+const vec4 coords[4] = vec4[4](
     vec4(-1.0, -1.0,  0.0,  1.0),
     vec4( 1.0, -1.0,  1.0,  1.0),
     vec4( 1.0,  1.0,  1.0,  0.0),

@@ -20,6 +20,8 @@ SHADER_SOLID_VERT         :: "./src/glsl/solid.vert"
 SHADER_SOLID_FRAG         :: "./src/glsl/solid.frag"
 SHADER_LIGHT_VERT         :: "./src/glsl/light.vert"
 SHADER_LIGHT_FRAG         :: "./src/glsl/light.frag"
+SHADER_GRID_VERT          :: "./src/glsl/grid.vert"
+SHADER_GRID_FRAG          :: "./src/glsl/grid.frag"
 OPTION_VSYNC              :: false
 OPTION_ANTI_ALIAS         :: false
 OPTION_GAMMA_CORRECTION   :: false

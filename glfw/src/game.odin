@@ -24,6 +24,7 @@ Game :: struct {
     sp_font:            u32,
     sp_solid:           u32,
     sp_light:           u32,
+    sp_grid:            u32,
     font_tex:           u32,
     font_vao:           u32,
     font_vbo:           u32,
@@ -85,6 +86,7 @@ game_init :: proc(game: ^Game) {
     shader_load_vs_fs(&game.sp_screen, SHADER_SCREEN_VERT, SHADER_SCREEN_FRAG)
     shader_load_vs_fs(&game.sp_solid, SHADER_SOLID_VERT, SHADER_SOLID_FRAG)
     shader_load_vs_fs(&game.sp_light, SHADER_LIGHT_VERT, SHADER_LIGHT_FRAG)
+    shader_load_vs_fs(&game.sp_grid, SHADER_GRID_VERT, SHADER_GRID_FRAG)
     shader_load_cs(&game.sp_terrain, SHADER_TERRAIN)
 
     // Terrain colorbuffer setup
@@ -234,6 +236,7 @@ game_render :: proc(game: ^Game) {
     // Clear screen
     gl.ClearColor(0.2, 0.3, 0.3, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.Disable(gl.DEPTH_TEST)
 
     // Generate terrain colorbuffer and depthbuffer using compute shader
     gl.BindVertexArray(game.vao)
@@ -250,12 +253,26 @@ game_render :: proc(game: ^Game) {
     // Draw terrain colorbuffer to framebuffer
     gl.UseProgram(game.sp_screen)
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
+
+    // Projection and view matrix setup
+    cam_pos := glsl.vec3{game.camera.pos.x, game.camera.z, game.camera.pos.y}
+    cam_dir := glsl.normalize(glsl.vec3{game.camera.target.x, 0.0, game.camera.target.y} - cam_pos)
+    cam_right := glsl.normalize(glsl.cross_vec3({0.0, 1.0, 0.0}, cam_dir))
+    cam_up := glsl.cross_vec3(cam_dir, cam_right)
+    proj_mat := glsl.mat4Perspective(glsl.radians_f32(game.camera.fov), f32(f32(WINDOW_WIDTH) / f32(WINDOW_HEIGHT)), 0.1, CAM_CLIP)
+    view_mat := glsl.mat4LookAt(cam_pos, cam_pos + cam_dir, cam_up)
+
+    // Draw 3D grid
+    gl.UseProgram(game.sp_grid)
+    shader_set_mat4(game.sp_grid, "view_proj_mat", proj_mat * view_mat)
+    shader_set_vec2(game.sp_grid, "center_pos", game.camera.target)
+    gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
     gl.BindVertexArray(0)
 
     // Draw 3D models
+    /*
     gl.Enable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_solid)
-    
     //shader_set_mat4(game.sp_solid, "proj_mat", proj_mat)
     //shader_set_mat4(game.sp_solid, "view_mat", view_mat)
     //shader_set_vec3(game.sp_solid, "cam_pos", {game.camera.pos.x, game.camera.z, game.camera.pos.y})
@@ -272,6 +289,7 @@ game_render :: proc(game: ^Game) {
     }
     for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio) }
     for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_solid, game.camera, game.window_world_ratio) }
+    */
     
     // Draw lights
     /*
@@ -303,6 +321,7 @@ game_exit :: proc(game: ^Game) {
     gl.DeleteProgram(game.sp_font)
     gl.DeleteProgram(game.sp_solid)
     gl.DeleteProgram(game.sp_light)
+    gl.DeleteProgram(game.sp_grid)
     gl.DeleteVertexArrays(1, &game.vao)
     gl.DeleteBuffers(1, &game.vbo)
     gl.DeleteTextures(1, &game.font_tex)
