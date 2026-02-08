@@ -11,6 +11,7 @@ import gl "vendor:OpenGL"
 Game :: struct {
     window:             glfw.WindowHandle,
     ndc_pixel:          glsl.vec2,
+    window_world_ratio: glsl.vec2,
     frame:              u32,
     time:               f64,
     prev_time:          f64,
@@ -33,7 +34,6 @@ Game :: struct {
     terrain_height_tex: u32,
     camera:             ^Camera,
     primitives:         map[Primitive]Mesh,
-    materials:          [dynamic]Material,
     models:             [dynamic]Model,
     num_lights:         u32,
     ambient_light:      glsl.vec3,
@@ -65,6 +65,7 @@ game_init :: proc(game: ^Game) {
     gl.load_up_to(GL_VERSION_MAJOR, GL_VERSION_MINOR, glfw.gl_set_proc_address)
     gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
     game.ndc_pixel = {2.0 / WINDOW_WIDTH, 2.0 / WINDOW_HEIGHT}
+    game.window_world_ratio = {WINDOW_WIDTH/WORLD_RENDER_WIDTH, WINDOW_HEIGHT/WORLD_RENDER_HEIGHT}
     
     // OpenGL settings
     gl.Enable(gl.CULL_FACE)
@@ -92,8 +93,8 @@ game_init :: proc(game: ^Game) {
     gl.BindTexture(gl.TEXTURE_2D, game.terrain_colorbuf)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, WORLD_RENDER_WIDTH, WORLD_RENDER_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
     gl.BindImageTexture(0, game.terrain_colorbuf, 0, gl.FALSE, 0, gl.READ_ONLY, gl.RGBA32F)
     gl.UseProgram(game.sp_screen)
@@ -105,8 +106,8 @@ game_init :: proc(game: ^Game) {
     gl.BindTexture(gl.TEXTURE_2D, game.terrain_depthbuf)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.R32F, WORLD_RENDER_WIDTH, WORLD_RENDER_HEIGHT, 0, gl.RED, gl.UNSIGNED_BYTE, nil)
     gl.BindImageTexture(1, game.terrain_depthbuf, 0, gl.FALSE, 0, gl.READ_ONLY, gl.R32F)
     gl.UseProgram(game.sp_screen)
@@ -137,8 +138,8 @@ game_init :: proc(game: ^Game) {
     shader_set_int(game.sp_font, "font_tex", 3)
 
     // Load terrain textures and setup terrain shader
-    game.terrain_color_tex = texture_load("./assets/terrain/color.png", filtering = false)
-    game.terrain_height_tex = texture_load("./assets/terrain/height.png", filtering = false)
+    game.terrain_color_tex = texture_load("./assets/terrain/color.png")
+    game.terrain_height_tex = texture_load("./assets/terrain/height.png")
     gl.UseProgram(game.sp_terrain)
     gl.ActiveTexture(gl.TEXTURE4)
     gl.BindTexture(gl.TEXTURE_2D, game.terrain_color_tex)
@@ -150,19 +151,17 @@ game_init :: proc(game: ^Game) {
     shader_set_float(game.sp_terrain, "terrain_scale", TERRAIN_SCALE)
     shader_set_float(game.sp_terrain, "render_width", WORLD_RENDER_WIDTH)
     shader_set_uint(game.sp_terrain, "render_height", WORLD_RENDER_HEIGHT)
-    shader_set_uint(game.sp_terrain, "clip", TERRAIN_CLIP)
+    shader_set_uint(game.sp_terrain, "clip", CAM_CLIP)
     shader_set_vec3(game.sp_terrain, "sky_color", SKY_COLOR)
 
     // Screen shader setup
     gl.UseProgram(game.sp_screen)
     shader_set_vec3(game.sp_screen, "sky_color", SKY_COLOR)
     shader_set_float(game.sp_screen, "fog_start", FOG_START)
-    shader_set_vec2(game.sp_screen, "window_world_ratio", {WINDOW_WIDTH / WORLD_RENDER_WIDTH * 2, WINDOW_HEIGHT / WORLD_RENDER_HEIGHT * 2})
+    shader_set_vec2(game.sp_screen, "window_world_ratio", game.window_world_ratio * 2)
     
     // Solid shader setup
     gl.UseProgram(game.sp_solid)
-    shader_set_float(game.sp_solid, "near_clip", CAM_CLIP_NEAR)
-    shader_set_float(game.sp_solid, "far_clip", CAM_CLIP_FAR)
     shader_set_vec2(game.sp_solid, "window_size", {WINDOW_WIDTH, WINDOW_HEIGHT})
     
     // Load primitive meshes
@@ -171,45 +170,39 @@ game_init :: proc(game: ^Game) {
 
 game_setup :: proc(game: ^Game) {
     // Camera setup
+    game.camera.fov = 45.0
     camera_set(game.camera, {512.0, 512.0})
 
     // Light setup
-    game.ambient_light         = { 0.2,  0.2,  0.2}
-    game.dir_light.dir         = { 0.0, -1.0,  0.0}
-    game.dir_light.diffuse     = { 0.8,  0.8,  0.8}
-    game.dir_light.specular    = { 0.8,  0.8,  0.8}
+    game.ambient_light   = { 0.2,  0.2,  0.2}
+    game.dir_light.dir   = { 0.0, -1.0,  0.0}
+    game.dir_light.color = { 0.5,  0.5,  0.5}
+    
     light_add(game.lights, &game.num_lights,
-        pos = {0.0, 0.0, 0.0},
-        diffuse = {0.5, 0.5, 0.5},
-        specular = {1.0, 1.0, 1.0},
+        pos = {0.0, 0.0},
+        color = {1.0, 1.0, 1.0},
         constant = 1.0,
-        linear = 0.35,
-        quadratic = 0.44,
+        linear = 0.045,
+        quadratic = 0.0075,
         mesh = &game.primitives[.Cube],
         scale = glsl.vec3(0.2),
     )
 
-    // Material setup
-    append(&game.materials, Material{
-        color = {0.5, 0.5, 0.5},
-        shininess = 32.0,
-    })
-
     // Model setup
     append(&game.models, Model{
-        pos = {0.0, 0.0, -20.0},
+        pos = {512.0, 512.0},
         scale = {1.0, 1.0, 1.0},
         mesh = &game.primitives[.Cube],
-        material = &game.materials[0], 
+        color = {0.8, 0.8, 0.8},
     })
 }
 
 game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_ESCAPE) == glfw.PRESS { glfw.SetWindowShouldClose(game.window, true) }
-    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.camera, dpos = { math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt),  math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.camera, dpos = {-math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.camera, dpos = { math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.camera, dpos = {-math.sin_f32(game.camera.rot) * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.camera, dpos = { math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt),  math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.camera, dpos = { math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.camera, dz =  200.0 * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.camera, dz = -200.0 * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.camera, drot =  1.0 * f32(game.dt)) }
@@ -230,11 +223,11 @@ game_update :: proc(game: ^Game) {
     game.frame += 1
 
     // Update positions / rotations
-    game.lights[0].pos.z = math.cos_f32(f32(glfw.GetTime() * 0.3)) * 1.5 + game.models[0].pos.z
-    game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 0.3)) * 1.5
+    //game.lights[0].pos.z = math.cos_f32(f32(glfw.GetTime() * 0.3)) * 1.5 + game.models[0].pos.z
+    game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 1)) * 10 + game.models[0].pos.x
     //game.models[0].pos.z = math.sin_f32(f32(glfw.GetTime() * 1)) * (CAM_CLIP_FAR - 1) * 0.5 - CAM_CLIP_FAR * 0.5
-    game.models[0].pos.y = math.sin_f32(f32(glfw.GetTime() * 1)) * 0.25
-    game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
+    game.lights[0].pos.y = math.cos_f32(f32(glfw.GetTime() * 1)) * 10 + game.models[0].pos.y
+    //game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
 }
 
 game_render :: proc(game: ^Game) {
@@ -245,11 +238,12 @@ game_render :: proc(game: ^Game) {
     // Generate terrain colorbuffer and depthbuffer using compute shader
     gl.BindVertexArray(game.vao)
     gl.UseProgram(game.sp_terrain)
-    shader_set_vec3(game.sp_terrain, "camera.pos", game.camera.pos)
+    shader_set_vec2(game.sp_terrain, "camera.pos", game.camera.pos)
+    shader_set_float(game.sp_terrain, "camera.z", game.camera.z)
     shader_set_vec2(game.sp_terrain, "camera.target", game.camera.target)
     shader_set_vec2(game.sp_terrain, "camera.clip_l", game.camera.clip_l)
     shader_set_vec2(game.sp_terrain, "camera.clip_r", game.camera.clip_r)
-    shader_set_float(game.sp_terrain, "camera.tilt", game.camera.tilt)
+    shader_set_vec2(game.sp_terrain, "camera.rot", game.camera.rot)
     gl.DispatchCompute(WORLD_RENDER_WIDTH/10, 1, 1)
     gl.MemoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
@@ -260,44 +254,31 @@ game_render :: proc(game: ^Game) {
 
     // Draw 3D models
     gl.Enable(gl.DEPTH_TEST)
-    cam_front: glsl.vec3 = {0, 0, -1}
-    cam_fov: f32 = 45
-    cam_pos: glsl.vec3 = {0,0,0}
-    cam_up: glsl.vec3 = {0,1,0}
-
-    /*
-    cam_dir := glsl.normalize(game.camera.pos.xzy - {game.camera.target.x, 0.0, game.camera.target.y})
-    cam_right := glsl.normalize(glsl.cross_vec3({0.0, 1.0, 0.0}, cam_dir))
-    cam_up := glsl.cross_vec3(cam_dir, cam_right)
-    */
-
-    proj_mat := glsl.mat4Perspective(glsl.radians_f32(cam_fov), f32(f32(WINDOW_WIDTH) / f32(WINDOW_HEIGHT)), CAM_CLIP_NEAR, CAM_CLIP_FAR)
-    //proj_mat := glsl.mat4Ortho3d(-10 * WINDOW_WIDTH / WINDOW_HEIGHT , 10 * WINDOW_WIDTH/WINDOW_HEIGHT, -10, 10, CAM_CLIP_NEAR, CAM_CLIP_FAR)
-    view_mat := glsl.mat4LookAt(cam_pos, cam_front, cam_up)
     gl.UseProgram(game.sp_solid)
-    shader_set_mat4(game.sp_solid, "proj_mat", proj_mat)
-    shader_set_mat4(game.sp_solid, "view_mat", view_mat)
-    shader_set_vec3(game.sp_solid, "view_pos", cam_pos)
+    
+    //shader_set_mat4(game.sp_solid, "proj_mat", proj_mat)
+    //shader_set_mat4(game.sp_solid, "view_mat", view_mat)
+    //shader_set_vec3(game.sp_solid, "cam_pos", {game.camera.pos.x, game.camera.z, game.camera.pos.y})
     shader_set_vec3(game.sp_solid, "ambient_light", game.ambient_light)
     shader_set_vec3(game.sp_solid, "dir_light.dir", game.dir_light.dir)
-    shader_set_vec3(game.sp_solid, "dir_light.diffuse", game.dir_light.diffuse)
-    shader_set_vec3(game.sp_solid, "dir_light.specular", game.dir_light.specular)
+    shader_set_vec3(game.sp_solid, "dir_light.color", game.dir_light.color)
     shader_set_int(game.sp_solid, "num_lights", i32(game.num_lights))
     for i in 0 ..< game.num_lights {
-        shader_set_vec3(game.sp_solid, game.lights[i].u_name_pos,       game.lights[i].pos)
-        shader_set_vec3(game.sp_solid, game.lights[i].u_name_diffuse,   game.lights[i].diffuse)
-        shader_set_vec3(game.sp_solid, game.lights[i].u_name_specular,  game.lights[i].specular)
+        shader_set_vec2(game.sp_solid, game.lights[i].u_name_pos,       game.lights[i].pos)
+        shader_set_vec3(game.sp_solid, game.lights[i].u_name_color,   game.lights[i].color)
         shader_set_float(game.sp_solid, game.lights[i].u_name_constant,  game.lights[i].constant)
         shader_set_float(game.sp_solid, game.lights[i].u_name_linear,    game.lights[i].linear)
         shader_set_float(game.sp_solid, game.lights[i].u_name_quadratic, game.lights[i].quadratic)
     }
-    for &model in game.models { model_render(&model, game.sp_solid) }
+    for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio) }
+    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_solid, game.camera, game.window_world_ratio) }
     
     // Draw lights
+    /*
     gl.UseProgram(game.sp_light)
-    shader_set_mat4(game.sp_light, "proj_mat", proj_mat)
+    //shader_set_mat4(game.sp_light, "proj_mat", proj_mat)
     shader_set_mat4(game.sp_light, "view_mat", view_mat)
-    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_light) }
+    */
 
     // Draw font
     gl.Disable(gl.DEPTH_TEST)
@@ -305,7 +286,7 @@ game_render :: proc(game: ^Game) {
     gl.BindVertexArray(game.font_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, game.font_vbo)
     font_render(game, 2, 0, game.fps, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ))
-    font_render(game, 2, 1080-16, fmt.tprintf("camera: x=%.f y=%.f z=%.f rot=%.2f tilt=%.f", game.camera.pos.x, game.camera.pos.y, game.camera.pos.z, game.camera.rot, game.camera.tilt))
+    font_render(game, 2, 1080-16, fmt.tprintf("camera: pos=(%.f, %.f, %.f) rot=(%.2f, %.2f)", game.camera.pos.x, game.camera.pos.y, game.camera.z, game.camera.rot.x, game.camera.rot.y))
     gl.BindVertexArray(0)
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     
@@ -332,7 +313,6 @@ game_exit :: proc(game: ^Game) {
     for key, &mesh in game.primitives { mesh_destroy(&mesh) }
     for i in 0..< game.num_lights { light_destroy(&game.lights[i]) }
     delete(game.primitives)
-    delete(game.materials)
     delete(game.models)
     glfw.Terminate()
 }

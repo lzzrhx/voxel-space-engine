@@ -4,9 +4,10 @@ layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
 struct Camera {
     vec2 clip_r;
     vec2 clip_l;
-    vec3 pos;
+    vec2 pos;
+    float z;
     vec2 target;
-    float tilt;
+    vec2 rot;
 };
 
 // Uniform
@@ -42,7 +43,7 @@ void main() {
         if (ipos.x < 0 || ipos.x > terrain_size-1 || ipos.y < 0 || ipos.y > terrain_size-1) { continue; }
         vec2 tex_coords = vec2(ipos.x / render_width, ipos.y / float(render_height));
         uint terrain_height = uint(texture(height_tex, tex_coords).r * 255.0);
-        uint z = uint((camera.pos.z - terrain_height) / float(depth) * terrain_scale + camera.tilt);
+        uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.rot.x);
         if (z >= 0 && z <= render_height && z < max_z) {
             if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {
                 draw_line(x, z + 1, max_z, clip, sky_color);
