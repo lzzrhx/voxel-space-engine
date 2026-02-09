@@ -4,6 +4,11 @@
 !/**/
 !*.*
 
+*.bin
+
+# 3D objects
+*.glb
+
 # Prerequisites
 *.d
 

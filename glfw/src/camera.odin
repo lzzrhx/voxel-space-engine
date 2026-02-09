@@ -11,7 +11,6 @@ Camera :: struct {
     target: glsl.vec2,
     clip_l: glsl.vec2,
     clip_r: glsl.vec2,
-    fov:    f32,
 }
 
 camera_pos_from_target :: proc(target: glsl.vec2, dist, rot: f32) -> glsl.vec2 {

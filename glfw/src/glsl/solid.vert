@@ -32,7 +32,6 @@ uniform int num_lights;
 uniform vec3 color;
 
 // Out
-out vec3 vs_diff_light;
 out vec3 vs_color;
 
 void main()

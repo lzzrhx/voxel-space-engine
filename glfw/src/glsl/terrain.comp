@@ -41,10 +41,8 @@ void main() {
         pos += delta;
         ivec2 ipos = ivec2(pos);
         if (ipos.x < 0 || ipos.x > terrain_size-1 || ipos.y < 0 || ipos.y > terrain_size-1) { continue; }
-        vec2 tex_coords = vec2(ipos.x / render_width, ipos.y / float(render_height));
+        vec2 tex_coords = vec2(ipos.x / float(terrain_size), ipos.y / float(terrain_size));
         uint terrain_height = uint(texture(height_tex, tex_coords).r * 255.0);
-        //uint terrain_height = 0u;
-        //uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale);
         uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.rot.x);
         if (z >= 0 && z <= render_height && z < max_z) {
             if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {

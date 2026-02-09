@@ -38,12 +38,13 @@ CAM_DIST_MIN              :: 100
 CAM_DIST_MAX              :: 200
 CAM_Z_MIN                 :: 0
 CAM_Z_MAX                 :: 400
-CAM_SPEED                 :: 100
+CAM_SPEED                 :: 200
 CAM_CLIP                  :: 500
 SKY_COLOR                 :: glsl.vec3(0.2)
 FOG_START                 :: 0.6
 MAX_NUM_LIGHTS            :: 10
-MODEL_TERRAIN_SCALE       :: 0.005
+MODEL_TERRAIN_SCALE       :: 0.02
+TILE_SIZE                 :: 12
 
 main :: proc() {
     // Tracking allocator and logger set up
@@ -56,9 +57,11 @@ main :: proc() {
 
     // Program initialization
     game := &Game{
-        camera    = &Camera{},
-        dir_light = &DirLight{},
-        lights    = new([MAX_NUM_LIGHTS]Light),
+        primitives = make(map[Primitive]Mesh),
+        meshes     = make(map[string]Mesh),
+        camera     = &Camera{},
+        dir_light  = &DirLight{},
+        lights     = new([MAX_NUM_LIGHTS]Light),
     }
     game_init(game)
     game_setup(game)

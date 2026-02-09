@@ -2,6 +2,7 @@ package main
 import "core:fmt"
 import "core:strings"
 import "core:os"
+import "core:image"
 import "core:log"
 import "core:math"
 import "vendor:glfw"
@@ -33,8 +34,10 @@ Game :: struct {
     terrain_depthbuf:   u32,
     terrain_color_tex:  u32,
     terrain_height_tex: u32,
+    terrain_height:     ^[TERRAIN_SIZE * TERRAIN_SIZE]u8,
     camera:             ^Camera,
     primitives:         map[Primitive]Mesh,
+    meshes:             map[string]Mesh,
     models:             [dynamic]Model,
     num_lights:         u32,
     ambient_light:      glsl.vec3,
@@ -138,10 +141,16 @@ game_init :: proc(game: ^Game) {
     shader_set_vec2(game.sp_font, "ndc_pixel", game.ndc_pixel)
     shader_set_vec2(game.sp_font, "size", {FONT_WIDTH, FONT_HEIGHT})
     shader_set_int(game.sp_font, "font_tex", 3)
-
-    // Load terrain textures and setup terrain shader
+    
+    // Load terrain and setup terrain shader
     game.terrain_color_tex = texture_load("./assets/terrain/color.png")
     game.terrain_height_tex = texture_load("./assets/terrain/height.png")
+    height_img := img_load("./assets/terrain/height.png")
+    defer image.destroy(height_img)
+    game.terrain_height = new([TERRAIN_SIZE * TERRAIN_SIZE]u8)
+    for i in 0 ..< TERRAIN_SIZE * TERRAIN_SIZE {
+        game.terrain_height[i] = height_img.pixels.buf[i*3]
+    }
     gl.UseProgram(game.sp_terrain)
     gl.ActiveTexture(gl.TEXTURE4)
     gl.BindTexture(gl.TEXTURE_2D, game.terrain_color_tex)
@@ -168,11 +177,14 @@ game_init :: proc(game: ^Game) {
     
     // Load primitive meshes
     mesh_load_primitives(&game.primitives);
+
+    // Load meshes
+    gltf_load(&game.meshes, "bunny", "./assets/bunny.glb")
+
 }
 
 game_setup :: proc(game: ^Game) {
     // Camera setup
-    game.camera.fov = 45.0
     camera_set(game.camera, {512.0, 512.0})
 
     // Light setup
@@ -181,7 +193,7 @@ game_setup :: proc(game: ^Game) {
     game.dir_light.color = { 0.5,  0.5,  0.5}
     
     light_add(game.lights, &game.num_lights,
-        pos = {0.0, 0.0},
+        pos = {512 + TILE_SIZE, 512.0 + TILE_SIZE},
         color = {1.0, 1.0, 1.0},
         constant = 1.0,
         linear = 0.045,
@@ -194,8 +206,20 @@ game_setup :: proc(game: ^Game) {
     append(&game.models, Model{
         pos = {512.0, 512.0},
         scale = {1.0, 1.0, 1.0},
+        mesh = &game.meshes["bunny"],
+        color = {0.5, 0.5, 0.5},
+    })
+    append(&game.models, Model{
+        pos = {512.0 + TILE_SIZE, 512.0},
+        scale = {1.0, 1.0, 1.0},
         mesh = &game.primitives[.Cube],
-        color = {0.8, 0.8, 0.8},
+        color = {0.0, 0.75, 0.0},
+    })
+    append(&game.models, Model{
+        pos = {512.0 - TILE_SIZE, 512.0},
+        scale = {1.0, 1.0, 1.0},
+        mesh = &game.primitives[.Cube],
+        color = {0.75, 0.0, 0.0},
     })
 }
 
@@ -205,8 +229,8 @@ game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.camera, dpos = { math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.camera, dz =  200.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.camera, dz = -200.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.camera, dz =  50.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.camera, dz = -50.0 * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.camera, drot =  1.0 * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_D)      == glfw.PRESS { camera_modify(game.camera, drot = -1.0 * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_Q)      == glfw.PRESS { camera_modify(game.camera, ddist =  100.0 * f32(game.dt)) }
@@ -225,11 +249,10 @@ game_update :: proc(game: ^Game) {
     game.frame += 1
 
     // Update positions / rotations
-    //game.lights[0].pos.z = math.cos_f32(f32(glfw.GetTime() * 0.3)) * 1.5 + game.models[0].pos.z
-    game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 1)) * 10 + game.models[0].pos.x
-    //game.models[0].pos.z = math.sin_f32(f32(glfw.GetTime() * 1)) * (CAM_CLIP_FAR - 1) * 0.5 - CAM_CLIP_FAR * 0.5
-    game.lights[0].pos.y = math.cos_f32(f32(glfw.GetTime() * 1)) * 10 + game.models[0].pos.y
-    //game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
+    game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.x
+    game.lights[0].pos.y = math.cos_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.y
+    game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
+    //game.models[1].pos.y = math.sin_f32(f32(glfw.GetTime() * 0.2)) * 100 + 512
 }
 
 game_render :: proc(game: ^Game) {
@@ -255,6 +278,7 @@ game_render :: proc(game: ^Game) {
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
     // Projection and view matrix setup
+    /*
     cam_pos := glsl.vec3{game.camera.pos.x, game.camera.z, game.camera.pos.y}
     cam_dir := glsl.normalize(glsl.vec3{game.camera.target.x, 0.0, game.camera.target.y} - cam_pos)
     cam_right := glsl.normalize(glsl.cross_vec3({0.0, 1.0, 0.0}, cam_dir))
@@ -268,14 +292,11 @@ game_render :: proc(game: ^Game) {
     shader_set_vec2(game.sp_grid, "center_pos", game.camera.target)
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
     gl.BindVertexArray(0)
+    */
 
     // Draw 3D models
-    /*
     gl.Enable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_solid)
-    //shader_set_mat4(game.sp_solid, "proj_mat", proj_mat)
-    //shader_set_mat4(game.sp_solid, "view_mat", view_mat)
-    //shader_set_vec3(game.sp_solid, "cam_pos", {game.camera.pos.x, game.camera.z, game.camera.pos.y})
     shader_set_vec3(game.sp_solid, "ambient_light", game.ambient_light)
     shader_set_vec3(game.sp_solid, "dir_light.dir", game.dir_light.dir)
     shader_set_vec3(game.sp_solid, "dir_light.color", game.dir_light.color)
@@ -287,9 +308,8 @@ game_render :: proc(game: ^Game) {
         shader_set_float(game.sp_solid, game.lights[i].u_name_linear,    game.lights[i].linear)
         shader_set_float(game.sp_solid, game.lights[i].u_name_quadratic, game.lights[i].quadratic)
     }
-    for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio) }
-    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_solid, game.camera, game.window_world_ratio) }
-    */
+    for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio, game.terrain_height[:]) }
+    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_solid, game.camera, game.window_world_ratio, game.terrain_height[:]) }
     
     // Draw lights
     /*
@@ -314,6 +334,7 @@ game_render :: proc(game: ^Game) {
 }
 
 game_exit :: proc(game: ^Game) {
+    free(game.terrain_height)
     free(game.font_chars)
     free(game.lights)
     gl.DeleteProgram(game.sp_screen)
@@ -329,9 +350,11 @@ game_exit :: proc(game: ^Game) {
     gl.DeleteTextures(1, &game.terrain_depthbuf)
     gl.DeleteTextures(1, &game.terrain_color_tex)
     gl.DeleteTextures(1, &game.terrain_height_tex)
-    for key, &mesh in game.primitives { mesh_destroy(&mesh) }
     for i in 0..< game.num_lights { light_destroy(&game.lights[i]) }
+    for key, &mesh in game.primitives { mesh_destroy(&mesh) }
+    for key, &mesh in game.meshes { mesh_destroy(&mesh) }
     delete(game.primitives)
+    delete(game.meshes)
     delete(game.models)
     glfw.Terminate()
 }
