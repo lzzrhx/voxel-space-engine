@@ -117,8 +117,6 @@ game_init :: proc(game: ^Game) {
     gl.BindImageTexture(1, game.terrain_depthbuf, 0, gl.FALSE, 0, gl.READ_ONLY, gl.R32F)
     gl.UseProgram(game.sp_screen)
     shader_set_int(game.sp_screen, "terrain_depthbuf", 2)
-    gl.UseProgram(game.sp_solid)
-    shader_set_int(game.sp_solid, "terrain_depthbuf", 2)
 
     // Font setup
     game.font_chars = new([FONT_MAX_CHARS]u32)
@@ -173,14 +171,18 @@ game_init :: proc(game: ^Game) {
     
     // Solid shader setup
     gl.UseProgram(game.sp_solid)
-    shader_set_vec2(game.sp_solid, "window_size", {WINDOW_WIDTH, WINDOW_HEIGHT})
+    shader_set_float(game.sp_solid, "tile_size", TILE_SIZE)
+    shader_set_float(game.sp_solid, "clip", CAM_CLIP)
+    
+    // Light shader setup
+    gl.UseProgram(game.sp_light)
+    shader_set_float(game.sp_light, "clip", CAM_CLIP)
     
     // Load primitive meshes
     mesh_load_primitives(&game.primitives);
 
     // Load meshes
     gltf_load(&game.meshes, "bunny", "./assets/bunny.glb")
-
 }
 
 game_setup :: proc(game: ^Game) {
@@ -224,17 +226,19 @@ game_setup :: proc(game: ^Game) {
 }
 
 game_input :: proc(game: ^Game) {
+    speed: f32 = 1.0
+    if glfw.GetKey(game.window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS || glfw.GetKey(game.window, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS  { speed = 2.0 }
     if glfw.GetKey(game.window, glfw.KEY_ESCAPE) == glfw.PRESS { glfw.SetWindowShouldClose(game.window, true) }
-    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.camera, dpos = { math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt),  math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.camera, dpos = { math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.camera, dz =  50.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.camera, dz = -50.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.camera, drot =  1.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_D)      == glfw.PRESS { camera_modify(game.camera, drot = -1.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_Q)      == glfw.PRESS { camera_modify(game.camera, ddist =  100.0 * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_E)      == glfw.PRESS { camera_modify(game.camera, ddist = -100.0 * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt),  math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
+    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz =  300.0 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz = -300.0 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, drot =  1.5 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_D)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, drot = -1.5 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_Q)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, ddist =  150.0 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_E)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, ddist = -150.0 * speed * f32(game.dt)) }
 }
 
 game_update :: proc(game: ^Game) {
@@ -252,14 +256,13 @@ game_update :: proc(game: ^Game) {
     game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.x
     game.lights[0].pos.y = math.cos_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.y
     game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
-    //game.models[1].pos.y = math.sin_f32(f32(glfw.GetTime() * 0.2)) * 100 + 512
 }
 
 game_render :: proc(game: ^Game) {
     // Clear screen
     gl.ClearColor(0.2, 0.3, 0.3, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    gl.Disable(gl.DEPTH_TEST)
+    gl.Enable(gl.DEPTH_TEST)
 
     // Generate terrain colorbuffer and depthbuffer using compute shader
     gl.BindVertexArray(game.vao)
@@ -277,25 +280,7 @@ game_render :: proc(game: ^Game) {
     gl.UseProgram(game.sp_screen)
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
-    // Projection and view matrix setup
-    /*
-    cam_pos := glsl.vec3{game.camera.pos.x, game.camera.z, game.camera.pos.y}
-    cam_dir := glsl.normalize(glsl.vec3{game.camera.target.x, 0.0, game.camera.target.y} - cam_pos)
-    cam_right := glsl.normalize(glsl.cross_vec3({0.0, 1.0, 0.0}, cam_dir))
-    cam_up := glsl.cross_vec3(cam_dir, cam_right)
-    proj_mat := glsl.mat4Perspective(glsl.radians_f32(game.camera.fov), f32(f32(WINDOW_WIDTH) / f32(WINDOW_HEIGHT)), 0.1, CAM_CLIP)
-    view_mat := glsl.mat4LookAt(cam_pos, cam_pos + cam_dir, cam_up)
-
-    // Draw 3D grid
-    gl.UseProgram(game.sp_grid)
-    shader_set_mat4(game.sp_grid, "view_proj_mat", proj_mat * view_mat)
-    shader_set_vec2(game.sp_grid, "center_pos", game.camera.target)
-    gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
-    gl.BindVertexArray(0)
-    */
-
     // Draw 3D models
-    gl.Enable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_solid)
     shader_set_vec3(game.sp_solid, "ambient_light", game.ambient_light)
     shader_set_vec3(game.sp_solid, "dir_light.dir", game.dir_light.dir)
@@ -309,15 +294,11 @@ game_render :: proc(game: ^Game) {
         shader_set_float(game.sp_solid, game.lights[i].u_name_quadratic, game.lights[i].quadratic)
     }
     for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio, game.terrain_height[:]) }
-    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_solid, game.camera, game.window_world_ratio, game.terrain_height[:]) }
     
     // Draw lights
-    /*
     gl.UseProgram(game.sp_light)
-    //shader_set_mat4(game.sp_light, "proj_mat", proj_mat)
-    shader_set_mat4(game.sp_light, "view_mat", view_mat)
-    */
-
+    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_light, game.camera, game.window_world_ratio, game.terrain_height[:]) }
+    
     // Draw font
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_font)

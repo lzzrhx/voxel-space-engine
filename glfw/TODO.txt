@@ -2,10 +2,4 @@
 // TODO:
 ///////////////////////////////////////////////////////////////////////////////
 
- - Add 3D rendered entities placed on terrain
  - Support for multiple terrain "tiles" (3x3 "chunk space")
- - Camera/terrain collision
- - Add point lights
- - Align 3d world and terrain world (using grid for reference)
- - Ability to retrive terrain height at position (glReadPixels? - https://www.w3tutorials.net/blog/how-to-take-screenshot-in-opengl/)
- - Manually write projection and camera lookat matrix (https://www.youtube.com/watch?v=EqNcqBdrNyI https://www.songho.ca/opengl/gl_projectionmatrix.html)

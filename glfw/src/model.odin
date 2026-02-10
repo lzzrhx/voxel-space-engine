@@ -15,7 +15,7 @@ Model :: struct {
 
 model_render :: proc(model: ^Model, sp: u32, camera: ^Camera, window_world_ratio: glsl.vec2, terrain_height: []u8) {
     x_min := min(min(camera.pos.x, camera.pos.x + camera.clip_l.x), camera.pos.x + camera.clip_r.x)
-    x_max := max(max(camera.pos.x, camera.pos.x + camera.clip_r.x), camera.pos.x + camera.clip_r.x)
+    x_max := max(max(camera.pos.x, camera.pos.x + camera.clip_l.x), camera.pos.x + camera.clip_r.x)
     y_min := min(min(camera.pos.y, camera.pos.y + camera.clip_l.y), camera.pos.y + camera.clip_r.y)
     y_max := max(max(camera.pos.y, camera.pos.y + camera.clip_l.y), camera.pos.y + camera.clip_r.y)
     if model.pos.x > x_min && model.pos.x < x_max && model.pos.y > y_min && model.pos.y < y_max {
@@ -65,12 +65,10 @@ model_render :: proc(model: ^Model, sp: u32, camera: ^Camera, window_world_ratio
             scale_mat[0, 0] = model.scale.x * depth_scale
             scale_mat[1, 1] = model.scale.y * depth_scale
             scale_mat[2, 2] = model.scale.z * depth_scale
-
-            model_mat := ndc_mat * view_mat * rot_mat * scale_mat
-            normal_mat := ndc_mat * rot_mat * scale_mat
             shader_set_float(sp, "depth", ndc_pos.z)
-            shader_set_mat4(sp, "model_mat", model_mat)
-            shader_set_mat3(sp, "normal_mat", glsl.mat3(glsl.inverse_transpose(normal_mat)));
+            shader_set_mat4(sp, "ndc_mat", ndc_mat)
+            shader_set_mat4(sp, "model_mat", view_mat * rot_mat * scale_mat)
+            shader_set_mat3(sp, "normal_mat", glsl.mat3(glsl.inverse_transpose(rot_mat * scale_mat)));
             shader_set_vec3(sp, "color", model.color)
             shader_set_vec2(sp, "world_pos", model.pos)
             gl.BindVertexArray(model.mesh.vao)

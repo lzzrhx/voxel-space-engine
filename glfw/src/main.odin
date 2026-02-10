@@ -40,6 +40,7 @@ CAM_Z_MIN                 :: 0
 CAM_Z_MAX                 :: 400
 CAM_SPEED                 :: 200
 CAM_CLIP                  :: 500
+CAM_HEIGHT_COLLISION      :: 10
 SKY_COLOR                 :: glsl.vec3(0.2)
 FOG_START                 :: 0.6
 MAX_NUM_LIGHTS            :: 10

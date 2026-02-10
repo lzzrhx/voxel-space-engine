@@ -2,20 +2,18 @@
 
 // In
 in vec3 vs_color;
+in vec4 vs_pos;
 
 // Uniform
-uniform sampler2D terrain_depthbuf;
-uniform vec2 window_size;
 uniform float depth;
+uniform float clip;
 
 // Out
 out vec4 fs_frag_color;
 
 void main()
 {
-    float terrain_depth = texture(terrain_depthbuf, vec2(gl_FragCoord.x / window_size.x, 1.0 - gl_FragCoord.y / window_size.y)).r;
-    if (depth > terrain_depth) { discard; }
-    //gl_FragDepth = depth;
+    gl_FragDepth = vs_pos.z / clip + depth;
     fs_frag_color = vec4(vs_color, 1.0);
 }
 

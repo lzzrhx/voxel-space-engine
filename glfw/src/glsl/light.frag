@@ -1,16 +1,19 @@
 #version 330 core
 
 // In
-in vec2 vs_tex_coords;
+in vec4 vs_pos;
 
-//Uniform
-uniform vec3 diffuse;
-uniform vec3 specular;
+// Uniform
+uniform float depth;
+uniform float clip;
+uniform vec3 color;
 
 // Out
-out vec4 out_frag_color;
+out vec4 fs_frag_color;
 
 void main()
 {
-    out_frag_color = vec4(mix(specular, diffuse, distance(abs(vs_tex_coords - 0.5) * 2, vec2(0))), 1.0);
+    gl_FragDepth = vs_pos.z / clip + depth;
+    fs_frag_color = vec4(color, 1.0);
 }
+

@@ -34,9 +34,9 @@ camera_set :: proc(camera: ^Camera, pos: glsl.vec2, z: f32 = (CAM_Z_MIN + CAM_Z_
     camera_update_values(camera)
 }
 
-camera_modify :: proc(camera: ^Camera, dpos: glsl.vec2 = {0.0, 0.0}, dz: f32 = 0.0, drot: f32 = 0.0, ddist: f32 = 0.0) {
+camera_modify :: proc(terrain_height: []u8, camera: ^Camera, dpos: glsl.vec2 = {0.0, 0.0}, dz: f32 = 0.0, drot: f32 = 0.0, ddist: f32 = 0.0) {
     new_pos := camera_pos_from_target(camera.target + dpos, camera.dist + ddist, camera.rot.y + drot)
-    if camera.z + dz < CAM_Z_MAX && camera.z + dz > CAM_Z_MIN && camera.dist + ddist > CAM_DIST_MIN && camera.dist + ddist < CAM_DIST_MAX {
+    if camera.z + dz < CAM_Z_MAX && camera.z + dz > CAM_Z_MIN && camera.dist + ddist > CAM_DIST_MIN && camera.dist + ddist < CAM_DIST_MAX && f32(terrain_height_at(terrain_height, new_pos)) + CAM_HEIGHT_COLLISION < camera.z + dz {
         camera.pos = new_pos
         camera.z += dz
         camera.target += dpos

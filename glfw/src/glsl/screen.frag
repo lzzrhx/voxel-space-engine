@@ -22,11 +22,11 @@ out vec4 out_frag_color;
 
 void main()
 {
-    float depth = texture(terrain_depthbuf, vs_tex_coords).r;
-    if (depth < fog_start) {
+    gl_FragDepth = texture(terrain_depthbuf, vs_tex_coords).r;
+    if (gl_FragDepth < fog_start) {
         out_frag_color = vec4(texture(terrain_colorbuf, vs_tex_coords).rgb, 1.0);
     } else {
-        float fog_depth = (depth - fog_start) / (1.0 - fog_start) * DITHER_2_MAX;
+        float fog_depth = (gl_FragDepth - fog_start) / (1.0 - fog_start) * DITHER_2_MAX;
         int x = int(gl_FragCoord.x / window_world_ratio.x);
         int y = int(gl_FragCoord.y / window_world_ratio.y);
         float dither_val = x % 2 == 1 && y %  2 == 0 ? DITHER_2_1_0 : (x % 2 == 0 && y % 2 == 1 ? DITHER_2_0_1 : (x % 2 == 1 && y % 2 == 1 ? DITHER_2_1_1 : DITHER_2_0_0));

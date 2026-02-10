@@ -7,15 +7,14 @@ layout (location = 2) in vec2 in_tex_coords;
 
 // Uniform
 uniform mat4 model_mat;
-uniform mat4 view_mat;
-uniform mat4 proj_mat;
+uniform mat4 ndc_mat;
 
 // Out
-out vec2 vs_tex_coords;
+out vec4 vs_pos;
 
 void main()
 {
-    gl_Position = proj_mat * view_mat * model_mat * vec4(in_pos, 1.0);
-    vs_tex_coords = in_tex_coords;
+    vs_pos = model_mat * vec4(in_pos, 1.0);
+    gl_Position = ndc_mat * vs_pos;
 }
 
