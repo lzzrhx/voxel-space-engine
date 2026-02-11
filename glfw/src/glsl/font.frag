@@ -1,14 +1,12 @@
 #version 330 core
 
-// In
+// In / Out
 in vec2 vs_tex_coords;
+out vec4 out_frag_color;
 
-// Uniform
+// Uniforms
 uniform sampler2D font_tex;
 uniform vec3 color;
-
-// Out
-out vec4 out_frag_color;
 
 void main()
 {

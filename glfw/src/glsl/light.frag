@@ -1,19 +1,13 @@
 #version 330 core
 
-// In
-in vec4 vs_pos;
+// In / Out
+in float vs_depth;
+out vec4 fs_color;
 
-// Uniform
-uniform float depth;
-uniform float clip;
+//Uniforms
 uniform vec3 color;
 
-// Out
-out vec4 fs_frag_color;
-
-void main()
-{
-    gl_FragDepth = vs_pos.z / clip + depth;
-    fs_frag_color = vec4(color, 1.0);
+void main() {
+    gl_FragDepth = vs_depth;
+    fs_color = vec4(color, 1.0);
 }
-

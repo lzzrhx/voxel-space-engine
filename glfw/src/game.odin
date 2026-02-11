@@ -14,6 +14,7 @@ Game :: struct {
     ndc_pixel:          glsl.vec2,
     window_world_ratio: glsl.vec2,
     frame:              u32,
+    fps_frame:          u32,
     time:               f64,
     prev_time:          f64,
     fps:                u32,
@@ -26,6 +27,7 @@ Game :: struct {
     sp_solid:           u32,
     sp_light:           u32,
     sp_grid:            u32,
+    sp_gizmo:           u32,
     font_tex:           u32,
     font_vao:           u32,
     font_vbo:           u32,
@@ -90,6 +92,7 @@ game_init :: proc(game: ^Game) {
     shader_load_vs_fs(&game.sp_solid, SHADER_SOLID_VERT, SHADER_SOLID_FRAG)
     shader_load_vs_fs(&game.sp_light, SHADER_LIGHT_VERT, SHADER_LIGHT_FRAG)
     shader_load_vs_fs(&game.sp_grid, SHADER_GRID_VERT, SHADER_GRID_FRAG)
+    shader_load_vs_fs(&game.sp_gizmo, SHADER_GIZMO_VERT, SHADER_GIZMO_FRAG)
     shader_load_cs(&game.sp_terrain, SHADER_TERRAIN)
 
     // Terrain colorbuffer setup
@@ -146,9 +149,7 @@ game_init :: proc(game: ^Game) {
     height_img := img_load("./assets/terrain/height.png")
     defer image.destroy(height_img)
     game.terrain_height = new([TERRAIN_SIZE * TERRAIN_SIZE]u8)
-    for i in 0 ..< TERRAIN_SIZE * TERRAIN_SIZE {
-        game.terrain_height[i] = height_img.pixels.buf[i*3]
-    }
+    for i in 0 ..< TERRAIN_SIZE * TERRAIN_SIZE { game.terrain_height[i] = height_img.pixels.buf[i*3] }
     gl.UseProgram(game.sp_terrain)
     gl.ActiveTexture(gl.TEXTURE4)
     gl.BindTexture(gl.TEXTURE_2D, game.terrain_color_tex)
@@ -162,6 +163,19 @@ game_init :: proc(game: ^Game) {
     shader_set_uint(game.sp_terrain, "render_height", WORLD_RENDER_HEIGHT)
     shader_set_uint(game.sp_terrain, "clip", CAM_CLIP)
     shader_set_vec3(game.sp_terrain, "sky_color", SKY_COLOR)
+    
+    // Grid shader setup
+    gl.UseProgram(game.sp_grid)
+    shader_set_uint(game.sp_grid, "tile_size", TILE_SIZE)
+
+    // Solid shader setup
+    gl.UseProgram(game.sp_solid)
+    shader_set_float(game.sp_solid, "clip", CAM_CLIP)
+    shader_set_float(game.sp_solid, "tile_size", TILE_SIZE)
+    
+    // Light shader setup
+    gl.UseProgram(game.sp_light)
+    shader_set_float(game.sp_light, "clip", CAM_CLIP)
 
     // Screen shader setup
     gl.UseProgram(game.sp_screen)
@@ -169,60 +183,46 @@ game_init :: proc(game: ^Game) {
     shader_set_float(game.sp_screen, "fog_start", FOG_START)
     shader_set_vec2(game.sp_screen, "window_world_ratio", game.window_world_ratio * 2)
     
-    // Solid shader setup
-    gl.UseProgram(game.sp_solid)
-    shader_set_float(game.sp_solid, "tile_size", TILE_SIZE)
-    shader_set_float(game.sp_solid, "clip", CAM_CLIP)
-    
-    // Light shader setup
-    gl.UseProgram(game.sp_light)
-    shader_set_float(game.sp_light, "clip", CAM_CLIP)
-    
     // Load primitive meshes
     mesh_load_primitives(&game.primitives);
 
     // Load meshes
-    gltf_load(&game.meshes, "bunny", "./assets/bunny.glb")
+    //gltf_load(&game.meshes, "bunny", "./assets/bunny.glb")
 }
 
 game_setup :: proc(game: ^Game) {
     // Camera setup
-    camera_set(game.camera, {512.0, 512.0})
+    camera_set(game.camera, glsl.vec2(TILE_SIZE * 32.0 + TILE_SIZE * 0.5))
 
     // Light setup
     game.ambient_light   = { 0.2,  0.2,  0.2}
     game.dir_light.dir   = { 0.0, -1.0,  0.0}
     game.dir_light.color = { 0.5,  0.5,  0.5}
-    
     light_add(game.lights, &game.num_lights,
-        pos = {512 + TILE_SIZE, 512.0 + TILE_SIZE},
+        pos = {TILE_SIZE * 32.0, TILE_SIZE * 32.0},
         color = {1.0, 1.0, 1.0},
         constant = 1.0,
-        linear = 0.045,
-        quadratic = 0.0075,
+        linear = 0.14,
+        quadratic = 0.07,
         mesh = &game.primitives[.Cube],
         scale = glsl.vec3(0.2),
     )
-
+   
     // Model setup
     append(&game.models, Model{
-        pos = {512.0, 512.0},
+        pos = glsl.vec2(TILE_SIZE * 32.0),
+        scale = {1.0, 1.0, 1.0},
+        mesh = &game.primitives[.Cube],
+        color = {0.5, 0.5, 0.5},
+    })
+    /*
+    append(&game.models, Model{
+        pos = glsl.vec2{TILE_SIZE * 32.0, TILE_SIZE * 32.0},
         scale = {1.0, 1.0, 1.0},
         mesh = &game.meshes["bunny"],
         color = {0.5, 0.5, 0.5},
     })
-    append(&game.models, Model{
-        pos = {512.0 + TILE_SIZE, 512.0},
-        scale = {1.0, 1.0, 1.0},
-        mesh = &game.primitives[.Cube],
-        color = {0.0, 0.75, 0.0},
-    })
-    append(&game.models, Model{
-        pos = {512.0 - TILE_SIZE, 512.0},
-        scale = {1.0, 1.0, 1.0},
-        mesh = &game.primitives[.Cube],
-        color = {0.75, 0.0, 0.0},
-    })
+    */
 }
 
 game_input :: proc(game: ^Game) {
@@ -233,8 +233,8 @@ game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
-    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz =  300.0 * speed * f32(game.dt)) }
-    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz = -300.0 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz =  200.0 * speed * f32(game.dt)) }
+    if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz = -200.0 * speed * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, drot =  1.5 * speed * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_D)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, drot = -1.5 * speed * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_Q)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, ddist =  150.0 * speed * f32(game.dt)) }
@@ -245,27 +245,61 @@ game_update :: proc(game: ^Game) {
     // Update timekeeping variables
     game.time = glfw.GetTime()
     game.dt = game.time - game.prev_time
-    if game.dt > 0.0 && game.frame > game.fps {
+    if game.dt > 0.0 && game.fps_frame > game.fps {
         game.fps = u32(1.0 / game.dt)
-        game.frame = 0
+        game.fps_frame = 0
     }
     game.prev_time = game.time
+    game.fps_frame += 1
     game.frame += 1
 
     // Update positions / rotations
     game.lights[0].pos.x = math.sin_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.x
     game.lights[0].pos.y = math.cos_f32(f32(glfw.GetTime() * 1)) * TILE_SIZE * 2 + game.models[0].pos.y
-    game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
+    //game.models[0].rot = {0.5, 1.0, 0.0} * f32(glfw.GetTime()) * glsl.radians_f32(10.0)
 }
 
 game_render :: proc(game: ^Game) {
+    // Create projection and view matrix
+    //aspect := f32(WINDOW_HEIGHT) / f32(WINDOW_WIDTH)
+    //fov := 1.0 / math.tan_f32(glsl.radians_f32(45)/2.0)
+    //proj_mat[0, 0] = aspect * fov
+    //proj_mat[1, 1] = fov 
+    offset_mat: glsl.mat4 = 1
+    offset_mat[1, 3] = (WORLD_RENDER_HEIGHT - game.camera.rot.x) / WORLD_RENDER_HEIGHT * 2 - 1
+    proj_mat: glsl.mat4 = 1
+    proj_mat[0, 0] = 1
+    proj_mat[1, 1] = f32(WORLD_RENDER_WIDTH) / f32(WORLD_RENDER_HEIGHT)
+    proj_mat[2, 2] = -(CAM_CLIP + CAM_CLIP_NEAR) / (CAM_CLIP - CAM_CLIP_NEAR)
+    proj_mat[2, 3] = -2.0 * CAM_CLIP * CAM_CLIP_NEAR / (CAM_CLIP - CAM_CLIP_NEAR)
+    proj_mat[3, 2] = -1.0
+    proj_mat[3, 3] =  0.0
+    cam_pos := glsl.vec3{game.camera.pos.x, game.camera.z, game.camera.pos.y}
+    cam_dir := glsl.normalize(glsl.vec3{game.camera.target.x, 0.0, game.camera.target.y} - glsl.vec3{cam_pos.x, 0.0, cam_pos.z})
+    cam_right := glsl.normalize(glsl.cross_vec3({0.0, 1.0, 0.0}, cam_dir))
+    cam_up := glsl.cross_vec3(cam_dir, cam_right)
+    view_mat: glsl.mat4 = 1
+    view_mat[0, 0] = -cam_right.x
+    view_mat[0, 1] = -cam_right.y
+    view_mat[0, 2] = -cam_right.z
+    view_mat[0, 3] = glsl.dot_vec3(-cam_pos, -cam_right)
+    view_mat[1, 0] = cam_up.x
+    view_mat[1, 1] = cam_up.y
+    view_mat[1, 2] = cam_up.z
+    view_mat[1, 3] = glsl.dot_vec3(-cam_pos, cam_up)
+    view_mat[2, 0] = -cam_dir.x
+    view_mat[2, 1] = -cam_dir.y
+    view_mat[2, 2] = -cam_dir.z
+    view_mat[2, 3] = glsl.dot_vec3(-cam_pos, -cam_dir)
+    view_mat_gl := glsl.mat4LookAt(cam_pos, cam_pos + cam_dir, cam_up)
+    pv_mat := offset_mat * proj_mat * view_mat
+
     // Clear screen
     gl.ClearColor(0.2, 0.3, 0.3, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    gl.Enable(gl.DEPTH_TEST)
+    gl.BindVertexArray(game.vao)
 
     // Generate terrain colorbuffer and depthbuffer using compute shader
-    gl.BindVertexArray(game.vao)
     gl.UseProgram(game.sp_terrain)
     shader_set_vec2(game.sp_terrain, "camera.pos", game.camera.pos)
     shader_set_float(game.sp_terrain, "camera.z", game.camera.z)
@@ -277,28 +311,48 @@ game_render :: proc(game: ^Game) {
     gl.MemoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
     // Draw terrain colorbuffer to framebuffer
+    gl.Enable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_screen)
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
+    // Draw 3D grid
+    gl.Disable(gl.DEPTH_TEST)
+    gl.UseProgram(game.sp_grid)
+    shader_set_mat4(game.sp_grid, "pv_mat", offset_mat * proj_mat * view_mat)
+    shader_set_float(game.sp_grid, "terrain_size", TERRAIN_SIZE)
+    gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
+
     // Draw 3D models
+    gl.Enable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_solid)
+    shader_set_mat4(game.sp_solid, "pv_mat", pv_mat)
     shader_set_vec3(game.sp_solid, "ambient_light", game.ambient_light)
     shader_set_vec3(game.sp_solid, "dir_light.dir", game.dir_light.dir)
     shader_set_vec3(game.sp_solid, "dir_light.color", game.dir_light.color)
     shader_set_int(game.sp_solid, "num_lights", i32(game.num_lights))
     for i in 0 ..< game.num_lights {
-        shader_set_vec2(game.sp_solid, game.lights[i].u_name_pos,       game.lights[i].pos)
-        shader_set_vec3(game.sp_solid, game.lights[i].u_name_color,   game.lights[i].color)
-        shader_set_float(game.sp_solid, game.lights[i].u_name_constant,  game.lights[i].constant)
-        shader_set_float(game.sp_solid, game.lights[i].u_name_linear,    game.lights[i].linear)
+        shader_set_vec2(game.sp_solid, game.lights[i].u_name_pos, game.lights[i].pos)
+        shader_set_vec3(game.sp_solid, game.lights[i].u_name_color, game.lights[i].color)
+        shader_set_float(game.sp_solid, game.lights[i].u_name_constant, game.lights[i].constant)
+        shader_set_float(game.sp_solid, game.lights[i].u_name_linear, game.lights[i].linear)
         shader_set_float(game.sp_solid, game.lights[i].u_name_quadratic, game.lights[i].quadratic)
     }
-    for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.window_world_ratio, game.terrain_height[:]) }
-    
-    // Draw lights
+    for &model in game.models { model_render(&model, game.sp_solid, game.camera, game.terrain_height[:]) }
     gl.UseProgram(game.sp_light)
-    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_light, game.camera, game.window_world_ratio, game.terrain_height[:]) }
+    shader_set_mat4(game.sp_light, "pv_mat", pv_mat)
+    for i in 0 ..< game.num_lights { light_render(&game.lights[i], game.sp_light, game.camera, game.terrain_height[:]) }
+
+    // Draw camera target gizmo
+    gl.Disable(gl.DEPTH_TEST)
+    gl.BindVertexArray(game.vao)
+    gl.Enable(gl.LINE_SMOOTH)
+    gl.LineWidth(2)
+    gl.UseProgram(game.sp_gizmo)
+    shader_set_mat4(game.sp_gizmo, "pv_mat", pv_mat)
+    shader_set_vec2(game.sp_gizmo, "pos", game.camera.target)
+    gl.DrawArrays(gl.LINES, 0, 6)
     
+
     // Draw font
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_font)
@@ -324,6 +378,7 @@ game_exit :: proc(game: ^Game) {
     gl.DeleteProgram(game.sp_solid)
     gl.DeleteProgram(game.sp_light)
     gl.DeleteProgram(game.sp_grid)
+    gl.DeleteProgram(game.sp_gizmo)
     gl.DeleteVertexArrays(1, &game.vao)
     gl.DeleteBuffers(1, &game.vbo)
     gl.DeleteTextures(1, &game.font_tex)

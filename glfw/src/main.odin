@@ -22,6 +22,8 @@ SHADER_LIGHT_VERT         :: "./src/glsl/light.vert"
 SHADER_LIGHT_FRAG         :: "./src/glsl/light.frag"
 SHADER_GRID_VERT          :: "./src/glsl/grid.vert"
 SHADER_GRID_FRAG          :: "./src/glsl/grid.frag"
+SHADER_GIZMO_VERT          :: "./src/glsl/gizmo.vert"
+SHADER_GIZMO_FRAG          :: "./src/glsl/gizmo.frag"
 OPTION_VSYNC              :: false
 OPTION_ANTI_ALIAS         :: false
 OPTION_GAMMA_CORRECTION   :: false
@@ -36,16 +38,17 @@ TERRAIN_SIZE              :: 1024
 TERRAIN_SCALE             :: 150
 CAM_DIST_MIN              :: 100
 CAM_DIST_MAX              :: 200
-CAM_Z_MIN                 :: 0
-CAM_Z_MAX                 :: 400
+CAM_Z_MIN                 :: 5
+CAM_Z_MAX                 :: 150
 CAM_SPEED                 :: 200
 CAM_CLIP                  :: 500
-CAM_HEIGHT_COLLISION      :: 10
+CAM_CLIP_NEAR             :: 0.1
+CAM_HEIGHT_COLLISION      :: 5
 SKY_COLOR                 :: glsl.vec3(0.2)
 FOG_START                 :: 0.6
 MAX_NUM_LIGHTS            :: 10
 MODEL_TERRAIN_SCALE       :: 0.02
-TILE_SIZE                 :: 12
+TILE_SIZE                 :: 16
 
 main :: proc() {
     // Tracking allocator and logger set up

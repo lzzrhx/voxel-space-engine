@@ -1,24 +1,22 @@
 #version 330 core
 
-// 2x2 dither pattern
+// Constants (2x2 dither pattern)
 const float DITHER_2_0_0 = 0.0/1.0;
 const float DITHER_2_1_0 = 2.0/1.0;
 const float DITHER_2_0_1 = 3.0/1.0;
 const float DITHER_2_1_1 = 1.0/1.0;
 const float DITHER_2_MAX = 3.0/1.0;
 
-// In
+// In / Out
 in vec2 vs_tex_coords;
+out vec4 out_frag_color;
 
-// Uniform
+// Uniforms
 uniform sampler2D terrain_colorbuf;
 uniform sampler2D terrain_depthbuf;
 uniform vec3 sky_color;
 uniform float fog_start;
 uniform vec2 window_world_ratio;
-
-// Out
-out vec4 out_frag_color;
 
 void main()
 {

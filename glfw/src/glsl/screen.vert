@@ -1,13 +1,9 @@
 #version 330 core
 
-const vec4 coords[4] = vec4[4](
-    vec4(-1.0, -1.0,  0.0,  1.0),
-    vec4( 1.0, -1.0,  1.0,  1.0),
-    vec4( 1.0,  1.0,  1.0,  0.0),
-    vec4(-1.0,  1.0,  0.0,  0.0)
-);
+// Constants
+const vec4 coords[4] = vec4[4]( vec4(-1.0, -1.0,  0.0,  1.0), vec4( 1.0, -1.0,  1.0,  1.0), vec4( 1.0,  1.0,  1.0,  0.0), vec4(-1.0,  1.0,  0.0,  0.0) );
 
-// Out
+// In / Out
 out vec2 vs_tex_coords;
 
 void main() {

@@ -1,22 +1,18 @@
 #version 330 core
+
+// Constants
+const vec4 coords[4] = vec4[4]( vec4(-0.5, -0.5,  0.0, 0.99), vec4( 0.5, -0.5, 0.99, 0.99), vec4( 0.5,  0.5, 0.99,  0.0), vec4(-0.5,  0.5,  0.0,  0.0) );
+
+// In / Out
 layout (location = 0) in uint in_char;
+out vec2 vs_tex_coords;
 
-vec4 coords[4] = vec4[4](
-    vec4(-0.5, -0.5,  0.0, 0.99),
-    vec4( 0.5, -0.5, 0.99, 0.99),
-    vec4( 0.5,  0.5, 0.99,  0.0),
-    vec4(-0.5,  0.5,  0.0,  0.0)
-);
-
-// Uniform
+// Uniforms
 uniform vec2 size;
 uniform vec2 ndc_pixel;
 uniform float scale;
 uniform vec2 pos;
 uniform float spacing;
-
-// Out
-out vec2 vs_tex_coords;
 
 void main() {
     uint character = in_char & 255u;

@@ -1,20 +1,17 @@
 #version 330 core
 
-// In
+// In / Out
 layout (location = 0) in vec3 in_pos;
 layout (location = 1) in vec3 in_normal;
 layout (location = 2) in vec2 in_tex_coords;
+out float vs_depth;
 
-// Uniform
+// Uniforms
 uniform mat4 model_mat;
-uniform mat4 ndc_mat;
+uniform mat4 pv_mat;
+uniform float clip;
 
-// Out
-out vec4 vs_pos;
-
-void main()
-{
-    vs_pos = model_mat * vec4(in_pos, 1.0);
-    gl_Position = ndc_mat * vs_pos;
+void main() {
+    gl_Position = pv_mat * model_mat * vec4(in_pos, 1.0);
+    vs_depth = gl_Position.z / clip;
 }
-

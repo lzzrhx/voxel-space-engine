@@ -1,16 +1,14 @@
 #version 430 core
+
+// Structs
+struct Camera { vec2 clip_r; vec2 clip_l; vec2 pos; float z; vec2 target; vec2 rot; };
+
+// In / Outs
 layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+layout(rgba32f, binding = 0) uniform image2D out_colorbuffer;
+layout(r32f, binding = 1) uniform image2D out_depthbuffer;
 
-struct Camera {
-    vec2 clip_r;
-    vec2 clip_l;
-    vec2 pos;
-    float z;
-    vec2 target;
-    vec2 rot;
-};
-
-// Uniform
+// Uniforms
 uniform Camera camera;
 uniform sampler2D color_tex;
 uniform sampler2D height_tex;
@@ -20,10 +18,6 @@ uniform uint clip;
 uniform uint terrain_size;
 uniform float terrain_scale;
 uniform vec3 sky_color;
-
-// Out
-layout(rgba32f, binding = 0) uniform image2D out_colorbuffer;
-layout(r32f, binding = 1) uniform image2D out_depthbuffer;
 
 void draw_line(uint x, uint y_start, uint y_end, uint depth, vec3 color) {
     for (uint y = y_start; y < y_end; y++) {
@@ -43,7 +37,7 @@ void main() {
         if (ipos.x < 0 || ipos.x > terrain_size-1 || ipos.y < 0 || ipos.y > terrain_size-1) { continue; }
         vec2 tex_coords = vec2(ipos.x / float(terrain_size), ipos.y / float(terrain_size));
         uint terrain_height = uint(texture(height_tex, tex_coords).r * 255.0);
-        uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.rot.x);
+        uint z = uint((camera.z * pow(render_width / float(render_height), 2) - terrain_height) / float(depth) * terrain_scale + camera.rot.x);
         if (z >= 0 && z <= render_height && z < max_z) {
             if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {
                 draw_line(x, z + 1, max_z, clip, sky_color);
