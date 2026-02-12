@@ -26,7 +26,7 @@ camera_update_values :: proc(camera: ^Camera, update_pos: bool = true) {
     camera.clip_r = {cos * CAM_CLIP - sin * CAM_CLIP, sin * CAM_CLIP + cos * CAM_CLIP}
 }
 
-camera_set :: proc(camera: ^Camera, pos: glsl.vec2, z: f32 = (CAM_Z_MIN + CAM_Z_MAX) / 2.0, rot: f32 = 0.0, dist: f32 = (CAM_DIST_MIN + CAM_DIST_MAX) / 2.0) {
+camera_set :: proc(camera: ^Camera, pos: glsl.vec2, z: f32 = CAM_Z_MAX / 2.0, rot: f32 = 0.0, dist: f32 = (CAM_DIST_MIN + CAM_DIST_MAX) / 2.0) {
     camera.target = pos
     camera.z = z
     camera.rot.y = math.PI * 1.5 + rot

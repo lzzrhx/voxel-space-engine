@@ -2,7 +2,7 @@ package main
 import "core:math/linalg/glsl"
 
 terrain_height_at_i :: proc(heightmap: []u8, i: int) -> f32 {
-    if i >= 0 && i < TERRAIN_SIZE * TERRAIN_SIZE { return f32(heightmap[i]) * 0.25 }
+    if i >= 0 && i < TERRAIN_SIZE * TERRAIN_SIZE { return f32(heightmap[i]) * TERRAIN_SCALE / WORLD_RENDER_HEIGHT }
     return 0
 }
 

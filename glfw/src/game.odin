@@ -59,6 +59,8 @@ game_init :: proc(game: ^Game) {
     glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, GL_VERSION_MAJOR)
     glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, GL_VERSION_MINOR)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.WindowHint(glfw.RESIZABLE, glfw.FALSE)
+    glfw.WindowHint(glfw.DECORATED, glfw.TRUE)
     if OPTION_ANTI_ALIAS { glfw.WindowHint(glfw.SAMPLES, 4) }
     game.window = glfw.CreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, nil, nil)
     if game.window == nil {
@@ -75,6 +77,8 @@ game_init :: proc(game: ^Game) {
     
     // OpenGL settings
     gl.Enable(gl.CULL_FACE)
+    gl.Enable(gl.LINE_SMOOTH)
+    gl.LineWidth(2)
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     if OPTION_GAMMA_CORRECTION { gl.Enable(gl.FRAMEBUFFER_SRGB) }
@@ -144,8 +148,8 @@ game_init :: proc(game: ^Game) {
     shader_set_int(game.sp_font, "font_tex", 3)
     
     // Load terrain and setup terrain shader
-    game.terrain_color_tex = texture_load("./assets/terrain/color.png")
-    game.terrain_height_tex = texture_load("./assets/terrain/height.png")
+    game.terrain_color_tex = texture_load("./assets/terrain/color.png", filtering = false)
+    game.terrain_height_tex = texture_load("./assets/terrain/height.png", filtering = false)
     height_img := img_load("./assets/terrain/height.png")
     defer image.destroy(height_img)
     game.terrain_height = new([TERRAIN_SIZE * TERRAIN_SIZE]u8)
@@ -172,6 +176,7 @@ game_init :: proc(game: ^Game) {
     gl.UseProgram(game.sp_solid)
     shader_set_float(game.sp_solid, "clip", CAM_CLIP)
     shader_set_float(game.sp_solid, "tile_size", TILE_SIZE)
+    shader_set_float(game.sp_solid, "fog_start", FOG_START)
     
     // Light shader setup
     gl.UseProgram(game.sp_light)
@@ -181,7 +186,7 @@ game_init :: proc(game: ^Game) {
     gl.UseProgram(game.sp_screen)
     shader_set_vec3(game.sp_screen, "sky_color", SKY_COLOR)
     shader_set_float(game.sp_screen, "fog_start", FOG_START)
-    shader_set_vec2(game.sp_screen, "window_world_ratio", game.window_world_ratio * 2)
+    shader_set_vec2(game.sp_screen, "window_world_ratio", game.window_world_ratio)
     
     // Load primitive meshes
     mesh_load_primitives(&game.primitives);
@@ -207,7 +212,7 @@ game_setup :: proc(game: ^Game) {
         mesh = &game.primitives[.Cube],
         scale = glsl.vec3(0.2),
     )
-   
+
     // Model setup
     append(&game.models, Model{
         pos = glsl.vec2(TILE_SIZE * 32.0),
@@ -233,6 +238,12 @@ game_input :: proc(game: ^Game) {
     if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt), -math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
     if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {-math.sin_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt),  math.cos_f32(game.camera.rot.y) * speed * CAM_SPEED * f32(game.dt)})} 
+    /*
+    if glfw.GetKey(game.window, glfw.KEY_UP)     == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { 0.0, -speed * CAM_SPEED * f32(game.dt) }) } 
+    if glfw.GetKey(game.window, glfw.KEY_DOWN)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { 0.0,  speed * CAM_SPEED * f32(game.dt) }) }
+    if glfw.GetKey(game.window, glfw.KEY_LEFT)   == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = { -speed * CAM_SPEED * f32(game.dt), 0.0 }) }
+    if glfw.GetKey(game.window, glfw.KEY_RIGHT)  == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dpos = {  speed * CAM_SPEED * f32(game.dt), 0.0 }) }
+    */
     if glfw.GetKey(game.window, glfw.KEY_W)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz =  200.0 * speed * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_S)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, dz = -200.0 * speed * f32(game.dt)) }
     if glfw.GetKey(game.window, glfw.KEY_A)      == glfw.PRESS { camera_modify(game.terrain_height[:], game.camera, drot =  1.5 * speed * f32(game.dt)) }
@@ -266,7 +277,7 @@ game_render :: proc(game: ^Game) {
     //proj_mat[0, 0] = aspect * fov
     //proj_mat[1, 1] = fov 
     offset_mat: glsl.mat4 = 1
-    offset_mat[1, 3] = (WORLD_RENDER_HEIGHT - game.camera.rot.x) / WORLD_RENDER_HEIGHT * 2 - 1
+    offset_mat[1, 3] = 1 - game.camera.rot.x * 2.0 / WORLD_RENDER_HEIGHT
     proj_mat: glsl.mat4 = 1
     proj_mat[0, 0] = 1
     proj_mat[1, 1] = f32(WORLD_RENDER_WIDTH) / f32(WORLD_RENDER_HEIGHT)
@@ -286,7 +297,7 @@ game_render :: proc(game: ^Game) {
     view_mat[1, 0] = cam_up.x
     view_mat[1, 1] = cam_up.y
     view_mat[1, 2] = cam_up.z
-    view_mat[1, 3] = glsl.dot_vec3(-cam_pos, cam_up)
+    view_mat[1, 3] = glsl.dot_vec3(-cam_pos, cam_up) * 1.15 * TERRAIN_SCALE / WORLD_RENDER_HEIGHT
     view_mat[2, 0] = -cam_dir.x
     view_mat[2, 1] = -cam_dir.y
     view_mat[2, 2] = -cam_dir.z
@@ -345,13 +356,11 @@ game_render :: proc(game: ^Game) {
     // Draw camera target gizmo
     gl.Disable(gl.DEPTH_TEST)
     gl.BindVertexArray(game.vao)
-    gl.Enable(gl.LINE_SMOOTH)
-    gl.LineWidth(2)
     gl.UseProgram(game.sp_gizmo)
     shader_set_mat4(game.sp_gizmo, "pv_mat", pv_mat)
     shader_set_vec2(game.sp_gizmo, "pos", game.camera.target)
+    shader_set_vec2(game.sp_gizmo, "rot", {0.0, math.PI * 1.5 - game.camera.rot.y})
     gl.DrawArrays(gl.LINES, 0, 6)
-    
 
     // Draw font
     gl.Disable(gl.DEPTH_TEST)
@@ -359,7 +368,7 @@ game_render :: proc(game: ^Game) {
     gl.BindVertexArray(game.font_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, game.font_vbo)
     font_render(game, 2, 0, game.fps, 2, game.fps >= 50 ? {0.2, 0.8, 0.2} : (game.fps >= 30 ? {0.8, 0.8, 0.2} : {0.8, 0.2, 0.2} ))
-    font_render(game, 2, 1080-16, fmt.tprintf("camera: pos=(%.f, %.f, %.f) rot=(%.2f, %.2f)", game.camera.pos.x, game.camera.pos.y, game.camera.z, game.camera.rot.x, game.camera.rot.y))
+    font_render(game, 2, 1080-32, fmt.tprintf("camera: pos=(%.f, %.f, %.f) rot=(%.2f, %.2f)", game.camera.target.x, game.camera.target.y, game.camera.z, game.camera.rot.x, game.camera.rot.y), 2)
     gl.BindVertexArray(0)
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     
