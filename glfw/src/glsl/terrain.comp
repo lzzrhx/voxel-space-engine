@@ -19,9 +19,9 @@ uniform uint terrain_size;
 uniform float terrain_scale;
 uniform vec3 sky_color;
 
-void draw_line(uint x, uint y_start, uint y_end, uint depth, vec3 color) {
+void draw_line(uint x, uint y_start, uint y_end, uint depth, vec4 color) {
     for (uint y = y_start; y < y_end; y++) {
-        imageStore(out_colorbuffer, ivec2(x, y), vec4(color, 1.0));
+        imageStore(out_colorbuffer, ivec2(x, y), color);
         imageStore(out_depthbuffer, ivec2(x, y), vec4(vec3(float(depth)/float(clip)), 1.0));
     }
 }
@@ -40,13 +40,12 @@ void main() {
         uint z = uint((camera.z - terrain_height) / float(depth) * terrain_scale + camera.rot.x);
         if (z >= 0 && z <= render_height && z < max_z) {
             if (max_z == render_height && (ipos.y >= terrain_size - 2 || ipos.y <= 0 || ipos.x <= 0 || ipos.x >= terrain_size - 2)) {
-                draw_line(x, z + 1, max_z, clip, sky_color);
+                draw_line(x, z + 1, max_z, clip, vec4(sky_color, 0.0));
                 max_z = z + 1;
             }
-            vec3 color = texture(color_tex, tex_coords).rgb;
-            draw_line(x, z, max_z, depth, color);
+            draw_line(x, z, max_z, depth, vec4(texture(color_tex, tex_coords).rgb, 1.0));
             max_z = z;
         }
     }
-    if (max_z > 0) { draw_line(x, 0, max_z, clip, sky_color); }
+    if (max_z > 0) { draw_line(x, 0, max_z, clip, vec4(sky_color, 0.0)); }
 }

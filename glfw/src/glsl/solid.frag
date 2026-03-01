@@ -27,7 +27,7 @@ void main() {
     uint y = uint(gl_FragCoord.y);
     float dither_val = x % 2u == 1u && y %  2u == 0u ? DITHER_2_1_0 : (x % 2u == 0u && y % 2u == 1u ? DITHER_2_0_1 : (x % 2u == 1u && y % 2u == 1u ? DITHER_2_1_1 : DITHER_2_0_0));
     float depth_a = (1.0 - (vs_depth - fog_start) / (1.0 - fog_start));
-    float a = vs_depth > fog_start ? (vs_depth > dither_val ? cr_smoothstep(depth_a) : cp_smoothstep(depth_a) ) : 1.0;
+    float a = vs_depth > fog_start ? (vs_depth > dither_val ? cr_smoothstep(depth_a) : cp_smoothstep(min(depth_a, 0.5) * 2.0) ) : 1.0;
     fs_color = vec4(vs_color, a);
 }
 

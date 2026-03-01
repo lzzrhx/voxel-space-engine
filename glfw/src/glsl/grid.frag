@@ -8,7 +8,6 @@ in vec2 vs_pos;
 out vec4 fs_color;
 
 // Uniforms
-uniform float terrain_size;
 uniform uint tile_size;
 
 void main() {

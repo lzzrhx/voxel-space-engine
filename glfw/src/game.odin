@@ -171,6 +171,7 @@ game_init :: proc(game: ^Game) {
     // Grid shader setup
     gl.UseProgram(game.sp_grid)
     shader_set_uint(game.sp_grid, "tile_size", TILE_SIZE)
+    shader_set_float(game.sp_grid, "terrain_size", TERRAIN_SIZE)
 
     // Solid shader setup
     gl.UseProgram(game.sp_solid)
@@ -306,7 +307,7 @@ game_render :: proc(game: ^Game) {
     pv_mat := offset_mat * proj_mat * view_mat
 
     // Clear screen
-    gl.ClearColor(0.2, 0.3, 0.3, 1.0)
+    gl.ClearColor(SKY_COLOR.r, SKY_COLOR.g, SKY_COLOR.b, 1.0)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.BindVertexArray(game.vao)
 
@@ -330,7 +331,6 @@ game_render :: proc(game: ^Game) {
     gl.Disable(gl.DEPTH_TEST)
     gl.UseProgram(game.sp_grid)
     shader_set_mat4(game.sp_grid, "pv_mat", offset_mat * proj_mat * view_mat)
-    shader_set_float(game.sp_grid, "terrain_size", TERRAIN_SIZE)
     gl.DrawArrays(gl.TRIANGLE_FAN, 0, 4)
 
     // Draw 3D models

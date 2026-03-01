@@ -1,6 +1,6 @@
 # Voxel Space Engine
 
-Multiple versions of a voxel space engine made by following the YouTube video [Voxel Space (Comanche Terrain Rendering)](https://youtu.be/bQBY9BM9g_Y) by Gustavo Pezzi.
+Multiple versions of a voxel space engine, based on the YouTube video [Voxel Space (Comanche Terrain Rendering)](https://youtu.be/bQBY9BM9g_Y) by Gustavo Pezzi.
 
 The render algorithm is also explained by Sebastian Macke [here](https://github.com/s-macke/VoxelSpace).
 
