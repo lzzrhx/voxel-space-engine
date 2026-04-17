@@ -7,7 +7,8 @@ import "core:math/linalg/glsl"
 shader_load_file :: proc(path: string, type: gl.Shader_Type) -> u32 {
     data: []u8
     ok: bool
-    data, ok = os.read_entire_file(path)
+    err: os.Error
+    data, err = os.read_entire_file_from_path(path, context.temp_allocator)
     if !ok {
         log.errorf("File reading failed. (%s)", path)
         os.exit(1)
